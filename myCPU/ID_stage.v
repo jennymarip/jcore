@@ -49,6 +49,7 @@ module id_stage(
     output                         SWR          ,
     // EX
     input                          WS_EX        ,
+    input                          ERET         ,
     output                         MFC0
 );
 
@@ -173,6 +174,7 @@ wire        inst_mthi;
 wire        inst_syscall;
 wire        inst_mtc0;
 wire        inst_mfc0;
+wire        inst_eret;
 
 wire        dst_is_r31;  
 wire        dst_is_rt;  
@@ -189,10 +191,13 @@ wire        rs_le_zero;
 wire        rs_lt_zero;
 
 wire        ds_ex;
+wire        eret;
 
 assign br_bus       = {br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {rd              ,  //144:140
+assign ds_to_es_bus = {eret            ,  //146:146
+                       BD              ,  //145:145
+                       rd              ,  //144:140
                        ds_ex           ,  //139:139
                        alu_op          ,  //138:125
                        load_op         ,  //124:124
@@ -232,7 +237,7 @@ assign ds_ready_go    = ds_valid & ~load_stall; // to change
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
 always @(posedge clk) begin
-    if (reset | WS_EX) begin
+    if (reset | WS_EX | ERET) begin
         ds_valid <= 1'b0;
     end
     else if (ds_allowin) begin
@@ -319,6 +324,7 @@ assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & rt_d[5'h00] & rd_d[5'h00] & s
 assign inst_syscall= op_d[6'h00] & func_d[6'h0c];
 assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0);
 assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0);
+assign inst_eret   = (ds_inst[31:0] == 32'h42000018);
 
 assign LB          = inst_lb  ;
 assign LBU         = inst_lbu ;
@@ -397,6 +403,10 @@ assign rt_value = rt_wait ? (rt == EXE_dest ?  EXE_dest_data :
                             : rf_rdata2;
 
 // BU
+reg bd;
+wire BD;
+
+assign BD = bd;
 assign rs_eq_rt   = (rs_value == rt_value);
 assign rs_ge_zero = ($signed(rs_value) >= 0);
 assign rs_gt_zero = ($signed(rs_value)  > 0);
@@ -418,8 +428,17 @@ assign br_taken   = (  inst_beq    &  rs_eq_rt
 assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez || inst_bltz || inst_bltzal || inst_bgezal) ? (fs_pc + {{14{imm[15]}}, imm[15:0], 2'b0}) :
                    (inst_jr  || inst_jalr)             ? rs_value :
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
+always @(posedge clk) begin
+    if(reset) begin
+        bd <= 1'b0;
+    end
+    else begin
+        bd <= br_taken;
+    end
+end
 
 // EX
 assign ds_ex = inst_syscall;
+assign eret  = inst_eret   ;
 
 endmodule

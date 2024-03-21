@@ -55,6 +55,8 @@ module exe_stage(
     input         SWR           ,
     // EX
     input         WS_EX         ,
+    input         MS_EX         ,
+    input         ERET          ,
     input         MFC0          ,
     output        _MFC0         ,
     // READ CP0
@@ -144,7 +146,11 @@ wire [31:0] es_rt_value        ;
 wire [31:0] es_pc              ;
 wire        es_ex              ;
 wire [ 4:0] rd                 ;
-assign {rd                 ,  //144:140
+wire        bd                 ;
+wire        eret               ;
+assign {eret               ,  //146:146
+        bd                 ,  //145:145
+        rd                 ,  //144:140
         es_ex              ,  //139:139
         es_alu_op          ,  //138:125
         es_load_op         ,  //124:124
@@ -170,7 +176,9 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {es_ex            ,  //71:71
+assign es_to_ms_bus = {eret             ,  //73:73
+                       bd               ,  //72:72
+                       es_ex            ,  //71:71
                        es_res_from_mem  ,  //70:70
                        es_gr_we         ,  //69:69
                        es_dest          ,  //68:64
@@ -180,12 +188,13 @@ assign es_to_ms_bus = {es_ex            ,  //71:71
 assign EXE_dest = es_dest & {5{es_valid}};
 
 
-assign es_ready_go    = ~div_unfinished;
+assign es_ready_go    = ~div_unfinished | MS_EX | WS_EX;
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
-    if (reset | WS_EX) begin
+    if (reset | WS_EX | ERET) begin
         es_valid <= 1'b0;
+        ds_to_es_bus_r <= 1'b0;
     end
     else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
@@ -223,10 +232,10 @@ always @(posedge clk) begin
         HI   <= 1'b0;
         LO   <= 1'b0;
     end
-    else if (mthi) begin
+    else if (mthi & ~(WS_EX | MS_EX)) begin
         HI   <= es_rs_value;
     end
-    else if (mtlo) begin
+    else if (mtlo & ~(WS_EX | MS_EX)) begin
         LO   <= es_rs_value;
     end
 end
@@ -274,7 +283,7 @@ always @(posedge clk) begin
         signed_divisor_tvalid  <=  1'b0;
         div_unfinished         <=  1'b0;
     end
-    else if (is_div) begin
+    else if (is_div & ~es_ex & ~MS_EX) begin
         signed_dividend_tvalid <= 1'b1;
         signed_divisor_tvalid  <= 1'b1;
         div_unfinished         <= 1'b1;
@@ -313,12 +322,12 @@ always @(posedge clk) begin
     if (reset) begin
         unsigned_dividend_tvalid <=  1'b0;
         unsigned_divisor_tvalid  <=  1'b0;
-        div_unfinished         <=  1'b0;
+        div_unfinished           <=  1'b0;
     end
-    else if (is_divu) begin
+    else if (is_divu & ~es_ex & ~MS_EX) begin
         unsigned_dividend_tvalid <= 1'b1;
         unsigned_divisor_tvalid  <= 1'b1;
-        div_unfinished         <= 1'b1;
+        div_unfinished           <= 1'b1;
     end
 end
 
@@ -354,7 +363,7 @@ always @(posedge clk) begin
     else begin
         mult_exe <= is_mult;
     end
-    if(mult_exe) begin
+    if(mult_exe & ~es_ex & ~MS_EX) begin
         HI <= mult_res[63:32];
         LO <= mult_res[31: 0];
     end
@@ -366,7 +375,7 @@ always @(posedge clk) begin
     else begin
         multu_exe <= is_multu;
     end
-    if(multu_exe) begin
+    if(multu_exe & ~es_ex & ~MS_EX) begin
         HI <= multu_res[63:32];
         LO <= multu_res[31: 0];
     end
@@ -389,6 +398,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
 assign data_sram_en    = 1'b1;
 assign data_sram_wen   = es_mem_we&&es_valid  ?
                          (
+                            (WS_EX || MS_EX      )? 4'b0000 :
                             (sb  & (LDB == 2'b00))? 4'b0001 :
                             (sb  & (LDB == 2'b01))? 4'b0010 :
                             (sb  & (LDB == 2'b10))? 4'b0100 :

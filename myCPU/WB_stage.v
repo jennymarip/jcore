@@ -21,6 +21,8 @@ module wb_stage(
     output [31:0] WB_dest_data    ,
     // EX
     output        WS_EX           ,
+    output [31:0] cp0_epc         ,
+    output        ERET            ,
     // READ CP0
     input         mfc0_read       ,
     input  [ 4:0] mfc0_cp0_raddr  ,
@@ -36,7 +38,11 @@ wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc;
 wire        ws_ex;
-assign {ws_ex          ,  //70:70
+wire        bd   ;
+wire        eret ;
+assign {eret           ,  //72:72
+        bd             ,  //71:71
+        ws_ex          ,  //70:70
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
@@ -57,7 +63,7 @@ assign ws_to_rf_bus = {rf_we   ,  //37:37
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset | ws_ex) begin
+    if (reset | ws_ex | eret) begin
         ws_valid       <= 1'b0;
         ms_to_ws_bus_r <= 1'b0;
     end
@@ -85,25 +91,37 @@ assign debug_wb_rf_wdata = ws_final_result;
 
 // EX
 assign WS_EX = ws_ex;
+assign ERET  = eret ;
 
 wire [ 4:0] cp0_raddr;
 wire [31:0] cp0_rdata;
 wire [ 4:0] cp0_waddr;
 wire [31:0] cp0_wdata;
+wire [ 4:0] excode;
 
 assign mfc0_rdata = cp0_rdata;
+assign cp0_epc    = eret ? cp0_rdata + 4'h4 : 32'b0;
 
-assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr : 5'b11111;
+assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr : 
+                   eret      ? `CP0_EPC       :
+                               5'b11111;
 assign cp0_waddr = ws_ex ? 5'b1110 :  5'b11111;
 assign cp0_wdata = ws_ex ?   ws_pc : 31'b0;
+assign excode    = 5'b01000;
 // CP0
 CP0 CP0(
-    .clk   (clk      ),
-    .reset (reset    ),
-    .raddr (cp0_raddr),
-    .rdata (cp0_rdata),
-    .waddr (cp0_waddr),
-    .wdata (cp0_wdata),
-    .ex    (ws_ex    )
+    .clk    (clk      ),
+    .reset  (reset    ),
+    // read
+    .raddr  (cp0_raddr),
+    .rdata  (cp0_rdata),
+    // write
+    .waddr  (cp0_waddr),
+    .wdata  (cp0_wdata),
+    .excode (excode   ),
+    // control
+    .ex     (ws_ex    ),
+    .bd     (bd       ),
+    .eret   (eret     )
     );
 endmodule

@@ -46,7 +46,9 @@ wire [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus;
 wire [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus;
 wire [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
 wire [`BR_BUS_WD       -1:0] br_bus;
-wire          WS_EX;
+wire          WS_EX  ;
+wire [31:0]   cp0_epc;
+wire          ERET   ;
 
 // IF stage
 if_stage if_stage(
@@ -66,7 +68,8 @@ if_stage if_stage(
     .inst_sram_wdata(inst_sram_wdata),
     .inst_sram_rdata(inst_sram_rdata),
     // EX
-    .WS_EX          (WS_EX          )
+    .WS_EX          (WS_EX          ),
+    .cp0_epc        (cp0_epc        )
 );
 wire        is_div  ;
 wire        is_divu ;
@@ -137,6 +140,7 @@ id_stage id_stage(
     .SWR           (SWR           ),
     // EX
     .WS_EX         (WS_EX         ),
+    .ERET          (ERET          ),
     .MFC0          (MFC0          )
 );
 wire [ 1:0] LDB      ;
@@ -151,6 +155,7 @@ wire        mfc0_read     ;
 wire [ 4:0] mfc0_cp0_raddr;
 wire        _MFC0     ;
 wire [31:0] mfc0_rdata;
+wire        MS_EX     ;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -207,6 +212,8 @@ exe_stage exe_stage(
     .SWR            (SWR            ),
     // EX
     .WS_EX          (WS_EX          ),
+    .MS_EX          (MS_EX          ),
+    .ERET           (ERET           ),
     .MFC0           (MFC0           ),
     ._MFC0          (_MFC0          ),
     // READ CP0
@@ -245,6 +252,8 @@ mem_stage mem_stage(
     .rt_value       (rt_value       ),
     // EX
     .WS_EX          (WS_EX          ),
+    .ERET           (ERET           ),
+    .MS_EX          (MS_EX          ),
     // READ CP0
     .MFC0           (_MFC0          )
 );
@@ -270,6 +279,8 @@ wb_stage wb_stage(
     .WB_dest_data     (WB_dest_data     ),
     // EX
     .WS_EX            (WS_EX            ),
+    .cp0_epc          (cp0_epc          ),
+    .ERET             (ERET             ),
     // READ CP0
     .mfc0_read        (mfc0_read        ),
     .mfc0_cp0_raddr   (mfc0_cp0_raddr   ),

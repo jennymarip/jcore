@@ -17,7 +17,8 @@ module if_stage(
     output [31:0] inst_sram_wdata,
     input  [31:0] inst_sram_rdata,
     // EX
-    input         WS_EX
+    input         WS_EX          ,
+    input  [31:0] cp0_epc
 );
 
 reg         fs_valid;
@@ -43,7 +44,10 @@ assign fs_to_ds_bus = {fs_inst ,
 // pre-IF stage
 assign to_fs_valid  = ~reset && pre_fs_ready_go;
 assign seq_pc       = fs_pc + 3'h4;
-assign nextpc       = WS_EX ? 32'hbfc00380 : br_taken ? br_target : seq_pc; 
+assign nextpc       = WS_EX              ? 32'hbfc00380 : 
+                      (cp0_epc != 32'b0) ? cp0_epc      :
+                      br_taken           ? br_target    : 
+                                           seq_pc; 
 assign pre_fs_ready_go  = ~br_stall;
 
 // IF stage
@@ -55,6 +59,9 @@ always @(posedge clk) begin
     if (reset) begin
         fs_valid <= 1'b0;
     end
+    else if (WS_EX) begin
+        fs_valid <= 1'b1;
+    end
     else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
     end
@@ -62,12 +69,12 @@ always @(posedge clk) begin
     if (reset) begin
         fs_pc <= 32'hbfbffffc;  //trick: to make nextpc be 0xbfc00000 during reset 
     end
-    else if (to_fs_valid && fs_allowin) begin
+    else if (to_fs_valid && fs_allowin || WS_EX) begin
         fs_pc <= nextpc;
     end
 end
 
-assign inst_sram_en    = to_fs_valid && fs_allowin && ~br_stall;
+assign inst_sram_en    = to_fs_valid && fs_allowin && ~br_stall || WS_EX;
 assign inst_sram_wen   = 4'h0;
 assign inst_sram_addr  = nextpc;
 assign inst_sram_wdata = 32'b0;
