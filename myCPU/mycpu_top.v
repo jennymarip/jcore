@@ -90,6 +90,7 @@ wire        SH      ;
 wire        SWL     ;
 wire        SWR     ;
 wire        MFC0    ;
+wire [ 2:0] of_test ;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -141,7 +142,8 @@ id_stage id_stage(
     // EX
     .WS_EX         (WS_EX         ),
     .ERET          (ERET          ),
-    .MFC0          (MFC0          )
+    .MFC0          (MFC0          ),
+    .of_test       (of_test       )
 );
 wire [ 1:0] LDB      ;
 wire        _LB      ;
@@ -216,6 +218,7 @@ exe_stage exe_stage(
     .ERET           (ERET           ),
     .MFC0           (MFC0           ),
     ._MFC0          (_MFC0          ),
+    .of_test        (of_test        ),
     // READ CP0
     .mfc0_read      (mfc0_read      ),
     .mfc0_cp0_raddr (mfc0_cp0_raddr ),

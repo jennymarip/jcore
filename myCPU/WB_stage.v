@@ -36,13 +36,13 @@ reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
 wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
-wire [31:0] ws_pc;
-wire        ws_ex;
-wire        bd   ;
-wire        eret ;
-assign {eret           ,  //72:72
-        bd             ,  //71:71
-        ws_ex          ,  //70:70
+wire [31:0] ws_pc  ;
+wire        bd     ;
+wire        eret   ;
+wire [ 2:0] ex_code;
+assign {ex_code        ,  //74:72
+        eret           ,  //71:71
+        bd             ,  //70:70
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
@@ -63,7 +63,7 @@ assign ws_to_rf_bus = {rf_we   ,  //37:37
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset | ws_ex | eret) begin
+    if (reset | (ex_code != 3'b0) | eret) begin
         ws_valid       <= 1'b0;
         ms_to_ws_bus_r <= 1'b0;
     end
@@ -76,7 +76,7 @@ always @(posedge clk) begin
     end
 end
 
-assign rf_we    = ws_gr_we&&ws_valid;
+assign rf_we    = ws_gr_we&&ws_valid & ~WS_EX;
 assign rf_waddr = ws_dest;
 assign rf_wdata = ws_final_result;
 
@@ -90,7 +90,7 @@ assign debug_wb_rf_wnum  = ws_dest;
 assign debug_wb_rf_wdata = ws_final_result;
 
 // EX
-assign WS_EX = ws_ex;
+assign WS_EX = (ex_code != 3'b0);
 assign ERET  = eret ;
 
 wire [ 4:0] cp0_raddr;
@@ -105,23 +105,26 @@ assign cp0_epc    = eret ? cp0_rdata + 4'h4 : 32'b0;
 assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr : 
                    eret      ? `CP0_EPC       :
                                5'b11111;
-assign cp0_waddr = ws_ex ? 5'b1110 :  5'b11111;
-assign cp0_wdata = ws_ex ?   ws_pc : 31'b0;
-assign excode    = 5'b01000;
+assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
+assign cp0_wdata = WS_EX ?  ws_pc : 31'b0;
+assign excode    = (ex_code == `SYSCALL ) ? 5'b1000 :
+                   (ex_code == `BREAK   ) ? 5'b1001 :
+                   (ex_code == `OVERFLOW) ? 5'b1100 :
+                                            5'b0;
 // CP0
 CP0 CP0(
-    .clk    (clk      ),
-    .reset  (reset    ),
+    .clk     (clk      ),
+    .reset   (reset    ),
     // read
-    .raddr  (cp0_raddr),
-    .rdata  (cp0_rdata),
+    .raddr   (cp0_raddr),
+    .rdata   (cp0_rdata),
     // write
-    .waddr  (cp0_waddr),
-    .wdata  (cp0_wdata),
-    .excode (excode   ),
+    .waddr   (cp0_waddr),
+    .wdata   (cp0_wdata),
+    .excode  (excode   ),
     // control
-    .ex     (ws_ex    ),
-    .bd     (bd       ),
-    .eret   (eret     )
+    .ex_code (ex_code  ),
+    .bd      (bd       ),
+    .eret    (eret     )
     );
 endmodule

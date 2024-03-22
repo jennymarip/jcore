@@ -50,7 +50,8 @@ module id_stage(
     // EX
     input                          WS_EX        ,
     input                          ERET         ,
-    output                         MFC0
+    output                         MFC0         ,
+    output [ 2:0]                  of_test
 );
 
 reg         ds_valid   ;
@@ -172,6 +173,7 @@ wire        inst_mfhi;
 wire        inst_mtlo;
 wire        inst_mthi;
 wire        inst_syscall;
+wire        inst_break;
 wire        inst_mtc0;
 wire        inst_mfc0;
 wire        inst_eret;
@@ -190,15 +192,15 @@ wire        rs_gt_zero;
 wire        rs_le_zero;
 wire        rs_lt_zero;
 
-wire        ds_ex;
-wire        eret;
+wire [ 2:0] ex_code;
+wire        eret   ;
 
 assign br_bus       = {br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {eret            ,  //146:146
-                       BD              ,  //145:145
-                       rd              ,  //144:140
-                       ds_ex           ,  //139:139
+assign ds_to_es_bus = {ex_code         ,  //148:146
+                       eret            ,  //145:145
+                       BD              ,  //144:144
+                       rd              ,  //143:139
                        alu_op          ,  //138:125
                        load_op         ,  //124:124
                        src1_is_sa      ,  //123:123
@@ -218,7 +220,7 @@ assign ds_to_es_bus = {eret            ,  //146:146
 wire   src1_no_rs;    //指令 rs 域非 0，且不是从寄存器堆读 rs 的数据
 wire   src2_no_rt;    //指令 rt 域非 0，且不是从寄存器堆读 rt 的数据
 assign src1_no_rs = 1'b0;
-assign src2_no_rt = inst_addiu | (load_op & ~inst_lwl & ~inst_lwr) | inst_jal | inst_lui | inst_j | inst_syscall;
+assign src2_no_rt = inst_addiu | (load_op & ~inst_lwl & ~inst_lwr) | inst_jal | inst_lui | inst_j | inst_syscall | inst_break;
 wire   rs_wait;       //与源操作数rs对应的寄存器号一致
 wire   rt_wait;		  //与源操作数rt对应的寄存器号一致
 assign rs_wait    = ~src1_no_rs & (rs!=5'd0) 
@@ -231,7 +233,7 @@ assign inst_no_dest = inst_beq | inst_bgez | inst_bne | inst_bgtz | inst_blez | 
                       inst_j | inst_jr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr |
                       inst_div | inst_divu | inst_mult | inst_multu | 
                       inst_mthi | inst_mtlo |
-                      inst_syscall | inst_mtc0;
+                      inst_syscall | inst_break | inst_mtc0;
 
 assign ds_ready_go    = ds_valid & ~load_stall; // to change
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
@@ -322,6 +324,7 @@ assign inst_mfhi   = op_d[6'h00] & func_d[6'h10] & rs_d[5'h00] & rt_d[5'h00] & s
 assign inst_mtlo   = op_d[6'h00] & func_d[6'h13] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
 assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
 assign inst_syscall= op_d[6'h00] & func_d[6'h0c];
+assign inst_break  = op_d[6'h00] & func_d[6'h0d];
 assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0);
 assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0);
 assign inst_eret   = (ds_inst[31:0] == 32'h42000018);
@@ -341,6 +344,7 @@ assign SH          = inst_sh  ;
 assign SWL         = inst_swl ;
 assign SWR         = inst_swr ;
 assign MFC0        = inst_mfc0;
+assign of_test     = {inst_sub, inst_addi, inst_add};
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr | inst_j | inst_jal | inst_jalr | inst_bgezal | inst_bltzal | inst_add | inst_addi;
 assign alu_op[ 1] = inst_subu | inst_sub;
@@ -438,7 +442,9 @@ always @(posedge clk) begin
 end
 
 // EX
-assign ds_ex = inst_syscall;
+assign ex_code = inst_syscall ? `SYSCALL :
+                 inst_break   ? `BREAK   :
+                                3'b0;
 assign eret  = inst_eret   ;
 
 endmodule

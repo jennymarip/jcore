@@ -10,15 +10,19 @@ module CP0(
     input  [31:0] wdata ,
     input  [ 4:0] excode,
     // control
-    input         ex    ,
+    input  [ 2:0] ex_code,
     input         bd    ,
     input         eret  
 );
+wire ex;
+assign ex = (ex_code != 3'b0);
+
 // EPC
 reg [31:0] cp0_epc;
 always @(posedge clk) begin
     if (ex && !cp0_status_exl) begin
-        cp0_epc <= bd ? wdata - 3'h4 : wdata;
+        cp0_epc <= bd ? wdata - 3'h4 : 
+                        wdata;
     end
 end
 // CAUSE
@@ -48,7 +52,7 @@ always @(posedge clk) begin
     if(reset) begin
         cp0_cause_excode <= 5'b0;
     end
-    else begin
+    else if (ex) begin
         cp0_cause_excode <= excode;
     end
 end

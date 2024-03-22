@@ -59,6 +59,7 @@ module exe_stage(
     input         ERET          ,
     input         MFC0          ,
     output        _MFC0         ,
+    input  [ 2:0] of_test       , // single hot
     // READ CP0
     output        mfc0_read     ,
     output [ 4:0] mfc0_cp0_raddr,
@@ -144,14 +145,13 @@ wire [15:0] es_imm             ;
 wire [31:0] es_rs_value        ;
 wire [31:0] es_rt_value        ;
 wire [31:0] es_pc              ;
-wire        es_ex              ;
+wire [ 2:0] ex_code            ;
 wire [ 4:0] rd                 ;
 wire        bd                 ;
 wire        eret               ;
-assign {eret               ,  //146:146
-        bd                 ,  //145:145
-        rd                 ,  //144:140
-        es_ex              ,  //139:139
+assign {eret               ,  //145:145
+        bd                 ,  //144:144
+        rd                 ,  //143:139
         es_alu_op          ,  //138:125
         es_load_op         ,  //124:124
         es_src1_is_sa      ,  //123:123
@@ -176,9 +176,9 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {eret             ,  //73:73
-                       bd               ,  //72:72
-                       es_ex            ,  //71:71
+assign es_to_ms_bus = {ex_code          ,  //75:73
+                       eret             ,  //72:72
+                       bd               ,  //71:71
                        es_res_from_mem  ,  //70:70
                        es_gr_we         ,  //69:69
                        es_dest          ,  //68:64
@@ -187,6 +187,7 @@ assign es_to_ms_bus = {eret             ,  //73:73
                       };
 assign EXE_dest = es_dest & {5{es_valid}};
 
+reg [ 2:0] OF_TEST;
 
 assign es_ready_go    = ~div_unfinished | MS_EX | WS_EX;
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
@@ -195,6 +196,7 @@ always @(posedge clk) begin
     if (reset | WS_EX | ERET) begin
         es_valid <= 1'b0;
         ds_to_es_bus_r <= 1'b0;
+        OF_TEST <= 3'b0;
     end
     else if (es_allowin) begin
         es_valid <= ds_to_es_valid;
@@ -202,6 +204,7 @@ always @(posedge clk) begin
 
     if (ds_to_es_valid && es_allowin) begin
         ds_to_es_bus_r <= ds_to_es_bus;
+        OF_TEST <= of_test;
     end
 end
 
@@ -222,6 +225,22 @@ alu u_alu(
 assign es_final_result = mfc0 ? mfc0_rdata : 
                          mflo ? LO : 
                          mfhi ? HI : es_alu_result;
+// overflow test
+wire [ 2:0] OF_TEST_;
+assign OF_TEST_ = OF_TEST;
+
+wire [ 2:0] of_flag;
+wire sign1;
+wire sign2;
+wire sign3;
+assign sign1 = es_alu_src1[31]  ;
+assign sign2 = es_alu_src2[31]  ;
+assign sign3 = es_alu_result[31];
+assign of_flag = ((OF_TEST_ == 3'b001) & ((sign1 == sign2) & (sign1 != sign3))) ? 3'b001 :
+                 ((OF_TEST_ == 3'b010) & ((sign1 == sign2) & (sign1 != sign3))) ? 3'b010 :
+                 ((OF_TEST_ == 3'b100) & ((sign1 != sign2) & (sign1 != sign3))) ? 3'b100 :
+                                                                                  3'b0;
+assign ex_code = (of_flag != 3'b0) ? `OVERFLOW : ds_to_es_bus_r[148:146];
 
 // HI LO reg
 reg [31:0] HI;
@@ -283,7 +302,7 @@ always @(posedge clk) begin
         signed_divisor_tvalid  <=  1'b0;
         div_unfinished         <=  1'b0;
     end
-    else if (is_div & ~es_ex & ~MS_EX) begin
+    else if (is_div & (ex_code == 3'b0) & ~MS_EX) begin
         signed_dividend_tvalid <= 1'b1;
         signed_divisor_tvalid  <= 1'b1;
         div_unfinished         <= 1'b1;
@@ -324,7 +343,7 @@ always @(posedge clk) begin
         unsigned_divisor_tvalid  <=  1'b0;
         div_unfinished           <=  1'b0;
     end
-    else if (is_divu & ~es_ex & ~MS_EX) begin
+    else if (is_divu & (ex_code == 3'b0) & ~MS_EX) begin
         unsigned_dividend_tvalid <= 1'b1;
         unsigned_divisor_tvalid  <= 1'b1;
         div_unfinished           <= 1'b1;
@@ -363,7 +382,7 @@ always @(posedge clk) begin
     else begin
         mult_exe <= is_mult;
     end
-    if(mult_exe & ~es_ex & ~MS_EX) begin
+    if(mult_exe & (ex_code == 3'b0) & ~MS_EX) begin
         HI <= mult_res[63:32];
         LO <= mult_res[31: 0];
     end
@@ -375,7 +394,7 @@ always @(posedge clk) begin
     else begin
         multu_exe <= is_multu;
     end
-    if(multu_exe & ~es_ex & ~MS_EX) begin
+    if(multu_exe & (ex_code == 3'b0) & ~MS_EX) begin
         HI <= multu_res[63:32];
         LO <= multu_res[31: 0];
     end
