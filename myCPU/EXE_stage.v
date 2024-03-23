@@ -56,6 +56,7 @@ module exe_stage(
     // EX
     input         WS_EX         ,
     input         MS_EX         ,
+    output        ES_EX         ,
     input         ERET          ,
     input         MFC0          ,
     output        _MFC0         ,
@@ -70,6 +71,7 @@ reg         es_valid      ;
 wire        es_ready_go   ;
 
 assign      rt_value = es_rt_value;
+assign      ES_EX    = (ex_code != 5'b0) & es_valid;
 
 reg         div_unfinished;
 reg         mflo;
@@ -123,6 +125,7 @@ always @(posedge clk) begin
         mfc0 <= MFC0;
     end
 end
+
 assign _LB  = lb ;
 assign _LBU = lbu;
 assign _LH  = lh ;
@@ -130,6 +133,12 @@ assign _LHU = lhu;
 assign _LWL = lwl;
 assign _LWR = lwr;
 assign _MFC0= mfc0;
+wire   _LW;
+assign _LW = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
+wire   SW;
+wire   _SH;
+assign SW = es_mem_we & ~sb & ~sh & ~swl & ~swr;
+assign _SH = sh;
 
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 wire [13:0] es_alu_op          ;
@@ -145,7 +154,7 @@ wire [15:0] es_imm             ;
 wire [31:0] es_rs_value        ;
 wire [31:0] es_rt_value        ;
 wire [31:0] es_pc              ;
-wire [ 2:0] ex_code            ;
+wire [ 4:0] ex_code            ;
 wire [ 4:0] rd                 ;
 wire        bd                 ;
 wire        eret               ;
@@ -176,7 +185,8 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {ex_code          ,  //75:73
+assign es_to_ms_bus = {BadVAddr         ,  //109:78
+                       ex_code          ,  //77:73
                        eret             ,  //72:72
                        bd               ,  //71:71
                        es_res_from_mem  ,  //70:70
@@ -230,9 +240,9 @@ wire [ 2:0] OF_TEST_;
 assign OF_TEST_ = OF_TEST;
 
 wire [ 2:0] of_flag;
-wire sign1;
-wire sign2;
-wire sign3;
+wire   sign1;
+wire   sign2;
+wire   sign3;
 assign sign1 = es_alu_src1[31]  ;
 assign sign2 = es_alu_src2[31]  ;
 assign sign3 = es_alu_result[31];
@@ -240,7 +250,11 @@ assign of_flag = ((OF_TEST_ == 3'b001) & ((sign1 == sign2) & (sign1 != sign3))) 
                  ((OF_TEST_ == 3'b010) & ((sign1 == sign2) & (sign1 != sign3))) ? 3'b010 :
                  ((OF_TEST_ == 3'b100) & ((sign1 != sign2) & (sign1 != sign3))) ? 3'b100 :
                                                                                   3'b0;
-assign ex_code = (of_flag != 3'b0) ? `OVERFLOW : ds_to_es_bus_r[148:146];
+assign ex_code = (ds_to_es_bus_r[150:146] != 5'b0) ? ds_to_es_bus_r[150:146]:
+                 (of_flag != 3'b0)                 ? `OVERFLOW : 
+                 BadAddr_R                         ? `ADEL     :
+                 BadAddr_W                         ? `ADES     :
+                                                     ds_to_es_bus_r[150:146];
 
 // HI LO reg
 reg [31:0] HI;
@@ -302,7 +316,7 @@ always @(posedge clk) begin
         signed_divisor_tvalid  <=  1'b0;
         div_unfinished         <=  1'b0;
     end
-    else if (is_div & (ex_code == 3'b0) & ~MS_EX) begin
+    else if (is_div & (ex_code == 5'b0) & ~MS_EX) begin
         signed_dividend_tvalid <= 1'b1;
         signed_divisor_tvalid  <= 1'b1;
         div_unfinished         <= 1'b1;
@@ -343,7 +357,7 @@ always @(posedge clk) begin
         unsigned_divisor_tvalid  <=  1'b0;
         div_unfinished           <=  1'b0;
     end
-    else if (is_divu & (ex_code == 3'b0) & ~MS_EX) begin
+    else if (is_divu & (ex_code == 5'b0) & ~MS_EX) begin
         unsigned_dividend_tvalid <= 1'b1;
         unsigned_divisor_tvalid  <= 1'b1;
         div_unfinished           <= 1'b1;
@@ -382,7 +396,7 @@ always @(posedge clk) begin
     else begin
         mult_exe <= is_mult;
     end
-    if(mult_exe & (ex_code == 3'b0) & ~MS_EX) begin
+    if(mult_exe & (ex_code == 5'b0) & ~MS_EX) begin
         HI <= mult_res[63:32];
         LO <= mult_res[31: 0];
     end
@@ -394,13 +408,24 @@ always @(posedge clk) begin
     else begin
         multu_exe <= is_multu;
     end
-    if(multu_exe & (ex_code == 3'b0) & ~MS_EX) begin
+    if(multu_exe & (ex_code == 5'b0) & ~MS_EX) begin
         HI <= multu_res[63:32];
         LO <= multu_res[31: 0];
     end
 end
 assign EXE_dest_data   = es_final_result & {32{es_valid}}; // forward
 
+// Bad Addr Test
+wire        BadAddr_R;
+wire        BadAddr_W;
+wire [31:0] BadVAddr;
+assign      BadAddr_R = (_LW & (LDB != 2'b0)) | ((_LH | _LHU) & LDB[0]);
+assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (_SH & LDB[0]);
+assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
+                                   (BadAddr_R | BadAddr_W) ? data_sram_addr          :
+                                                             32'b0;
+
+// R / W
 wire [31:0]  st_data;
 assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  sh ? {2{es_rt_value[15:0]}} :
@@ -415,7 +440,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  es_rt_value[31:0];
 
 assign data_sram_en    = 1'b1;
-assign data_sram_wen   = es_mem_we&&es_valid  ?
+assign data_sram_wen   = es_mem_we&&es_valid & ~BadAddr_W  ?
                          (
                             (WS_EX || MS_EX      )? 4'b0000 :
                             (sb  & (LDB == 2'b00))? 4'b0001 :
@@ -438,7 +463,7 @@ assign data_sram_wen   = es_mem_we&&es_valid  ?
 assign data_sram_addr  = es_alu_result;
 assign data_sram_wdata = st_data;
 
-assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr}};
+assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | _SH}};
 
 // READ CP0
 assign mfc0_read      = mfc0;

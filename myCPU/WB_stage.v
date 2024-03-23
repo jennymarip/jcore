@@ -36,11 +36,13 @@ reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
 wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
-wire [31:0] ws_pc  ;
-wire        bd     ;
-wire        eret   ;
-wire [ 2:0] ex_code;
-assign {ex_code        ,  //74:72
+wire [31:0] ws_pc   ;
+wire        bd      ;
+wire        eret    ;
+wire [ 4:0] ex_code ;
+wire [31:0] BadVAddr;
+assign {BadVAddr       ,  //108:77
+        ex_code        ,  //76:72
         eret           ,  //71:71
         bd             ,  //70:70
         ws_gr_we       ,  //69:69
@@ -63,7 +65,7 @@ assign ws_to_rf_bus = {rf_we   ,  //37:37
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset | (ex_code != 3'b0) | eret) begin
+    if (reset | (ex_code != 5'b0) | eret) begin
         ws_valid       <= 1'b0;
         ms_to_ws_bus_r <= 1'b0;
     end
@@ -90,14 +92,13 @@ assign debug_wb_rf_wnum  = ws_dest;
 assign debug_wb_rf_wdata = ws_final_result;
 
 // EX
-assign WS_EX = (ex_code != 3'b0);
+assign WS_EX = (ex_code != 5'b0);
 assign ERET  = eret ;
 
 wire [ 4:0] cp0_raddr;
 wire [31:0] cp0_rdata;
 wire [ 4:0] cp0_waddr;
 wire [31:0] cp0_wdata;
-wire [ 4:0] excode;
 
 assign mfc0_rdata = cp0_rdata;
 assign cp0_epc    = eret ? cp0_rdata + 4'h4 : 32'b0;
@@ -107,10 +108,7 @@ assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr :
                                5'b11111;
 assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
 assign cp0_wdata = WS_EX ?  ws_pc : 31'b0;
-assign excode    = (ex_code == `SYSCALL ) ? 5'b1000 :
-                   (ex_code == `BREAK   ) ? 5'b1001 :
-                   (ex_code == `OVERFLOW) ? 5'b1100 :
-                                            5'b0;
+
 // CP0
 CP0 CP0(
     .clk     (clk      ),
@@ -121,10 +119,10 @@ CP0 CP0(
     // write
     .waddr   (cp0_waddr),
     .wdata   (cp0_wdata),
-    .excode  (excode   ),
     // control
     .ex_code (ex_code  ),
     .bd      (bd       ),
-    .eret    (eret     )
+    .eret    (eret     ),
+    .BadVAddr(BadVAddr )
     );
 endmodule

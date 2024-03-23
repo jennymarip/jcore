@@ -8,14 +8,14 @@ module CP0(
     // WRITE PORT 
     input  [ 4:0] waddr ,
     input  [31:0] wdata ,
-    input  [ 4:0] excode,
     // control
-    input  [ 2:0] ex_code,
-    input         bd    ,
-    input         eret  
+    input  [ 4:0] ex_code ,
+    input         bd      ,
+    input         eret    ,
+    input  [31:0] BadVAddr
 );
 wire ex;
-assign ex = (ex_code != 3'b0);
+assign ex = (ex_code != 5'b0);
 
 // EPC
 reg [31:0] cp0_epc;
@@ -53,7 +53,7 @@ always @(posedge clk) begin
         cp0_cause_excode <= 5'b0;
     end
     else if (ex) begin
-        cp0_cause_excode <= excode;
+        cp0_cause_excode <= ex_code;
     end
 end
 // STATUS
@@ -87,8 +87,20 @@ always @(posedge clk) begin
         cp0_status_ie <= 1'b0;
     end
 end
-assign rdata = (raddr == `CP0_EPC)    ? cp0_epc :
-               (raddr == `CP0_CAUSE)  ? {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0} :
-               (raddr == `CP0_STATUS) ? {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie} :
+// BadVAddr
+reg [31: 0] cp0_badvaddr;
+always @(posedge clk) begin
+    if (reset) begin
+        cp0_badvaddr <= 32'b0;
+    end
+    else if (ex & (ex_code == `ADEL | ex_code == `ADES)) begin
+        cp0_badvaddr <= BadVAddr;
+    end
+end
+
+assign rdata = (raddr == `CP0_EPC)      ? cp0_epc :
+               (raddr == `CP0_CAUSE)    ? {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0} :
+               (raddr == `CP0_STATUS)   ? {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie} :
+               (raddr == `CP0_BadVAddr) ? cp0_badvaddr :
                32'b0;
 endmodule

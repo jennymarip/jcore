@@ -49,6 +49,7 @@ module id_stage(
     output                         SWR          ,
     // EX
     input                          WS_EX        ,
+    output                         DS_EX        ,
     input                          ERET         ,
     output                         MFC0         ,
     output [ 2:0]                  of_test
@@ -57,6 +58,7 @@ module id_stage(
 reg         ds_valid   ;
 wire        ds_ready_go;
 
+assign DS_EX = (ex_code != 5'b0) & ds_valid;
 // branch
 wire   br_stall;
 wire   load_stall;
@@ -68,10 +70,12 @@ wire [31                 :0] fs_pc;
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 
-wire [31:0] ds_inst;
-wire [31:0] ds_pc  ;
+wire [31:0] ds_inst ;
+wire [31:0] ds_pc   ;
+wire [31:0] BadVAddr;
 assign {ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
+assign BadVAddr = fs_to_ds_bus_r[101:70];
 
 wire        rf_we   ;
 wire [ 4:0] rf_waddr;
@@ -192,12 +196,13 @@ wire        rs_gt_zero;
 wire        rs_le_zero;
 wire        rs_lt_zero;
 
-wire [ 2:0] ex_code;
+wire [ 4:0] ex_code;
 wire        eret   ;
 
 assign br_bus       = {br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {ex_code         ,  //148:146
+assign ds_to_es_bus = {BadVAddr        ,  //182:151
+                       ex_code         ,  //150:146
                        eret            ,  //145:145
                        BD              ,  //144:144
                        rd              ,  //143:139
@@ -442,9 +447,10 @@ always @(posedge clk) begin
 end
 
 // EX
-assign ex_code = inst_syscall ? `SYSCALL :
-                 inst_break   ? `BREAK   :
-                                3'b0;
+assign ex_code = (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL :
+                 inst_syscall                     ? `SYSCALL :
+                 inst_break                       ? `BREAK   :
+                                                    fs_to_ds_bus_r[68:64];
 assign eret  = inst_eret   ;
 
 endmodule

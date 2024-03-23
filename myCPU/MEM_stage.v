@@ -78,11 +78,13 @@ wire        ms_res_from_mem;
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
-wire [31:0] ms_pc  ;
-wire        bd     ;
-wire        eret   ;
-wire [ 2:0] ex_code;
-assign {ex_code        ,  //75:73
+wire [31:0] ms_pc   ;
+wire        bd      ;
+wire        eret    ;
+wire [ 4:0] ex_code ;
+wire [31:0] BadVAddr;
+assign {BadVAddr       ,  //109:78
+        ex_code        ,  //77:73
         eret           ,  //72:72
         bd             ,  //71:71
         ms_res_from_mem,  //70:70
@@ -91,7 +93,7 @@ assign {ex_code        ,  //75:73
         ms_alu_result  ,  //63:32
         ms_pc             //31:0
        } = es_to_ms_bus_r;
-assign MS_EX = (ex_code != 3'b0);
+assign MS_EX = (ex_code != 5'b0);
 
 wire [ 7:0] single_B       ;
 wire [15:0] double_B       ; 
@@ -106,7 +108,8 @@ wire [31:0] ms_final_result;
 
 assign MEM_dest = ms_dest & {5{ms_valid}};
 
-assign ms_to_ws_bus = {ex_code        ,  //74:72
+assign ms_to_ws_bus = {BadVAddr       ,  //108:77
+                       ex_code        ,  //76:72
                        eret           ,  //71:71
                        bd             ,  //70:70
                        ms_gr_we       ,  //69:69

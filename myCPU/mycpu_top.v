@@ -50,6 +50,9 @@ wire          WS_EX  ;
 wire [31:0]   cp0_epc;
 wire          ERET   ;
 
+wire DS_EX;
+wire ES_EX;
+
 // IF stage
 if_stage if_stage(
     .clk            (clk            ),
@@ -69,7 +72,10 @@ if_stage if_stage(
     .inst_sram_rdata(inst_sram_rdata),
     // EX
     .WS_EX          (WS_EX          ),
-    .cp0_epc        (cp0_epc        )
+    .cp0_epc        (cp0_epc        ),
+    .DS_EX          (DS_EX          ),
+    .ES_EX          (ES_EX          ),
+    .MS_EX          (MS_EX          )
 );
 wire        is_div  ;
 wire        is_divu ;
@@ -141,6 +147,7 @@ id_stage id_stage(
     .SWR           (SWR           ),
     // EX
     .WS_EX         (WS_EX         ),
+    .DS_EX         (DS_EX         ),
     .ERET          (ERET          ),
     .MFC0          (MFC0          ),
     .of_test       (of_test       )
@@ -215,6 +222,7 @@ exe_stage exe_stage(
     // EX
     .WS_EX          (WS_EX          ),
     .MS_EX          (MS_EX          ),
+    .ES_EX          (ES_EX          ),
     .ERET           (ERET           ),
     .MFC0           (MFC0           ),
     ._MFC0          (_MFC0          ),

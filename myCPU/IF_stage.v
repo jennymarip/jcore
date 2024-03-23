@@ -18,7 +18,10 @@ module if_stage(
     input  [31:0] inst_sram_rdata,
     // EX
     input         WS_EX          ,
-    input  [31:0] cp0_epc
+    input  [31:0] cp0_epc        ,
+    input         DS_EX          ,
+    input         ES_EX          ,
+    input         MS_EX
 );
 
 reg         fs_valid;
@@ -36,9 +39,16 @@ wire         br_taken;
 wire [ 31:0] br_target;
 assign {br_stall, br_taken,br_target} = br_bus;
 
+// EX test
 wire [31:0] fs_inst;
-reg  [31:0] fs_pc;
-assign fs_to_ds_bus = {fs_inst ,
+reg  [31:0] fs_pc  ;
+wire [ 4:0] ex_code;
+assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (nextpc[1:0] != 2'b0) ? `ADEL : 5'b0;
+wire [31:0] BadVAddr;
+assign      BadVAddr = (ex_code == `ADEL) ? nextpc : 32'b0;
+assign fs_to_ds_bus = {BadVAddr,
+                       ex_code ,
+                       fs_inst ,
                        fs_pc   };
 
 // pre-IF stage
@@ -76,7 +86,7 @@ end
 
 assign inst_sram_en    = to_fs_valid && fs_allowin && ~br_stall || WS_EX;
 assign inst_sram_wen   = 4'h0;
-assign inst_sram_addr  = nextpc;
+assign inst_sram_addr  = {nextpc[31:2], 2'b0};
 assign inst_sram_wdata = 32'b0;
 
 assign fs_inst         = inst_sram_rdata;
