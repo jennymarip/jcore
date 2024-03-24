@@ -58,6 +58,8 @@ module exe_stage(
     input         MS_EX         ,
     output        ES_EX         ,
     input         ERET          ,
+    input         MS_ERET       ,
+    output        ES_ERET       ,
     input         MFC0          ,
     output        _MFC0         ,
     input  [ 2:0] of_test       , // single hot
@@ -158,6 +160,7 @@ wire [ 4:0] ex_code            ;
 wire [ 4:0] rd                 ;
 wire        bd                 ;
 wire        eret               ;
+wire        pc_error           ;
 assign {eret               ,  //145:145
         bd                 ,  //144:144
         rd                 ,  //143:139
@@ -177,6 +180,7 @@ assign {eret               ,  //145:145
         es_pc                 //31 :0
        } = ds_to_es_bus_r;
 
+assign ES_ERET = eret;
 wire [31:0] es_alu_src1    ;
 wire [31:0] es_alu_src2    ;
 wire [31:0] es_alu_result  ;
@@ -185,7 +189,8 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {BadVAddr         ,  //109:78
+assign es_to_ms_bus = {pc_error         ,  //110:110
+                       BadVAddr         ,  //109:78
                        ex_code          ,  //77:73
                        eret             ,  //72:72
                        bd               ,  //71:71
@@ -424,7 +429,7 @@ assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (_SH & LDB[0]);
 assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
                                    (BadAddr_R | BadAddr_W) ? data_sram_addr          :
                                                              32'b0;
-
+assign      pc_error  = ds_to_es_bus_r[183];
 // R / W
 wire [31:0]  st_data;
 assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
@@ -440,7 +445,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  es_rt_value[31:0];
 
 assign data_sram_en    = 1'b1;
-assign data_sram_wen   = es_mem_we&&es_valid & ~BadAddr_W  ?
+assign data_sram_wen   = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                          (
                             (WS_EX || MS_EX      )? 4'b0000 :
                             (sb  & (LDB == 2'b00))? 4'b0001 :

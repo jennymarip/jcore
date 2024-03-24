@@ -9,10 +9,15 @@ module CP0(
     input  [ 4:0] waddr ,
     input  [31:0] wdata ,
     // control
-    input  [ 4:0] ex_code ,
-    input         bd      ,
-    input         eret    ,
-    input  [31:0] BadVAddr
+    input  [ 4:0] ex_code   ,
+    input         bd        ,
+    input         eret      ,
+    input  [31:0] BadVAddr  ,
+    input         pc_error  ,
+    // mtc0
+    input         mtc0      ,
+    input  [31:0] mtc0_wdata,
+    input  [ 4:0] mtc0_waddr
 );
 wire ex;
 assign ex = (ex_code != 5'b0);
@@ -21,8 +26,11 @@ assign ex = (ex_code != 5'b0);
 reg [31:0] cp0_epc;
 always @(posedge clk) begin
     if (ex && !cp0_status_exl) begin
-        cp0_epc <= bd ? wdata - 3'h4 : 
-                        wdata;
+        cp0_epc <= (bd & ~pc_error) ? wdata - 3'h4 : 
+                                      wdata;
+    end
+    if (mtc0 & (mtc0_waddr == `CP0_EPC)) begin
+        cp0_epc <= mtc0_wdata;
     end
 end
 // CAUSE
@@ -45,6 +53,9 @@ reg [ 7:0] cp0_cause_ip;
 always @(posedge clk) begin
     if(reset) begin
         cp0_cause_ip[7:0] <= 8'b0;
+    end
+    else if (mtc0 & (mtc0_waddr == `CP0_CAUSE)) begin
+        cp0_cause_ip[7:0] <= mtc0_wdata[15:8];
     end
 end
 reg [ 4:0] cp0_cause_excode;
@@ -71,6 +82,9 @@ always @(posedge clk) begin
     else if (ex) begin
         cp0_status_im <= 8'b0;
     end
+    if (mtc0 & (mtc0_waddr == `CP0_STATUS)) begin
+        cp0_status_im <= mtc0_wdata[15:8];
+    end
 end
 reg cp0_status_exl;
 always @(posedge clk) begin
@@ -80,11 +94,17 @@ always @(posedge clk) begin
     else if (ex) begin
         cp0_status_exl <= 1'b1;
     end
+    if (mtc0 & (mtc0_waddr == `CP0_STATUS)) begin
+        cp0_status_exl <= mtc0_wdata[1];
+    end
 end
 reg cp0_status_ie;
 always @(posedge clk) begin
     if (reset) begin
         cp0_status_ie <= 1'b0;
+    end
+    else if (mtc0 & (mtc0_waddr == `CP0_STATUS)) begin
+        cp0_status_ie <= mtc0_wdata[0];
     end
 end
 // BadVAddr

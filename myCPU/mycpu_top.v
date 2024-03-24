@@ -72,31 +72,36 @@ if_stage if_stage(
     .inst_sram_rdata(inst_sram_rdata),
     // EX
     .WS_EX          (WS_EX          ),
+    .ERET           (ERET           ),
     .cp0_epc        (cp0_epc        ),
     .DS_EX          (DS_EX          ),
     .ES_EX          (ES_EX          ),
     .MS_EX          (MS_EX          )
 );
-wire        is_div  ;
-wire        is_divu ;
-wire        is_mult ;
-wire        is_multu;
-wire        LB      ;
-wire        LBU     ;
-wire        LH      ;
-wire        LHU     ;
-wire        LWL     ;
-wire        LWR     ;
-wire        MFLO    ;
-wire        MFHI    ;
-wire        MTLO    ;
-wire        MTHI    ;
-wire        SB      ;
-wire        SH      ;
-wire        SWL     ;
-wire        SWR     ;
-wire        MFC0    ;
-wire [ 2:0] of_test ;
+wire        is_div    ;
+wire        is_divu   ;
+wire        is_mult   ;
+wire        is_multu  ;
+wire        LB        ;
+wire        LBU       ;
+wire        LH        ;
+wire        LHU       ;
+wire        LWL       ;
+wire        LWR       ;
+wire        MFLO      ; 
+wire        MFHI      ; 
+wire        MTLO      ;
+wire        MTHI      ;
+wire        SB        ;
+wire        SH        ; 
+wire        SWL       ; 
+wire        SWR       ; 
+wire        MFC0      ; 
+wire [ 2:0] of_test   ;
+wire        MTC0      ;
+wire [31:0] mtc0_wdata;
+wire [ 4:0] mtc0_waddr;
+wire        ES_ERET   ;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -149,8 +154,14 @@ id_stage id_stage(
     .WS_EX         (WS_EX         ),
     .DS_EX         (DS_EX         ),
     .ERET          (ERET          ),
+    .ES_ERET       (ES_ERET       ),
+    .MS_ERET       (MS_ERET       ),
     .MFC0          (MFC0          ),
-    .of_test       (of_test       )
+    .of_test       (of_test       ),
+    // CP0 WRITE
+    .MTC0          (MTC0          ),
+    .mtc0_wdata    (mtc0_wdata    ),
+    .mtc0_waddr    (mtc0_waddr    )
 );
 wire [ 1:0] LDB      ;
 wire        _LB      ;
@@ -165,6 +176,7 @@ wire [ 4:0] mfc0_cp0_raddr;
 wire        _MFC0     ;
 wire [31:0] mfc0_rdata;
 wire        MS_EX     ;
+wire        MS_ERET   ;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -224,6 +236,8 @@ exe_stage exe_stage(
     .MS_EX          (MS_EX          ),
     .ES_EX          (ES_EX          ),
     .ERET           (ERET           ),
+    .MS_ERET        (MS_ERET        ),
+    .ES_ERET        (ES_ERET        ),
     .MFC0           (MFC0           ),
     ._MFC0          (_MFC0          ),
     .of_test        (of_test        ),
@@ -264,6 +278,7 @@ mem_stage mem_stage(
     // EX
     .WS_EX          (WS_EX          ),
     .ERET           (ERET           ),
+    .MS_ERET        (MS_ERET        ),
     .MS_EX          (MS_EX          ),
     // READ CP0
     .MFC0           (_MFC0          )
@@ -295,7 +310,11 @@ wb_stage wb_stage(
     // READ CP0
     .mfc0_read        (mfc0_read        ),
     .mfc0_cp0_raddr   (mfc0_cp0_raddr   ),
-    .mfc0_rdata       (mfc0_rdata       )
+    .mfc0_rdata       (mfc0_rdata       ),
+    // MTC0 WRITE
+    .MTC0             (MTC0             ),
+    .mtc0_wdata       (mtc0_wdata       ),
+    .mtc0_waddr       (mtc0_waddr       )
 );
 
 endmodule

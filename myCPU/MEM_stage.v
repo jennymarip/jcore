@@ -31,6 +31,7 @@ module mem_stage(
     // EX
     input                          WS_EX         ,
     input                          ERET          ,
+    output                         MS_ERET       ,
     output                         MS_EX         ,
     // READ CP0
     input                          MFC0
@@ -83,7 +84,9 @@ wire        bd      ;
 wire        eret    ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
-assign {BadVAddr       ,  //109:78
+wire        pc_error;
+assign {pc_error       ,  //110:110
+        BadVAddr       ,  //109:78
         ex_code        ,  //77:73
         eret           ,  //72:72
         bd             ,  //71:71
@@ -93,7 +96,8 @@ assign {BadVAddr       ,  //109:78
         ms_alu_result  ,  //63:32
         ms_pc             //31:0
        } = es_to_ms_bus_r;
-assign MS_EX = (ex_code != 5'b0);
+assign MS_EX   = (ex_code != 5'b0);
+assign MS_ERET = eret;
 
 wire [ 7:0] single_B       ;
 wire [15:0] double_B       ; 
@@ -108,7 +112,8 @@ wire [31:0] ms_final_result;
 
 assign MEM_dest = ms_dest & {5{ms_valid}};
 
-assign ms_to_ws_bus = {BadVAddr       ,  //108:77
+assign ms_to_ws_bus = {pc_error       ,  //109:109
+                       BadVAddr       ,  //108:77
                        ex_code        ,  //76:72
                        eret           ,  //71:71
                        bd             ,  //70:70

@@ -26,7 +26,11 @@ module wb_stage(
     // READ CP0
     input         mfc0_read       ,
     input  [ 4:0] mfc0_cp0_raddr  ,
-    output [31:0] mfc0_rdata
+    output [31:0] mfc0_rdata      ,
+    // MTC0 WRITE
+    input         MTC0            ,
+    input [31:0]  mtc0_wdata      ,
+    input [ 4:0]  mtc0_waddr
 );
 
 reg         ws_valid;
@@ -41,7 +45,9 @@ wire        bd      ;
 wire        eret    ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
-assign {BadVAddr       ,  //108:77
+wire        pc_error;
+assign {pc_error       ,  //109:109
+        BadVAddr       ,  //108:77
         ex_code        ,  //76:72
         eret           ,  //71:71
         bd             ,  //70:70
@@ -101,28 +107,34 @@ wire [ 4:0] cp0_waddr;
 wire [31:0] cp0_wdata;
 
 assign mfc0_rdata = cp0_rdata;
-assign cp0_epc    = eret ? cp0_rdata + 4'h4 : 32'b0;
+assign cp0_epc    = eret ? cp0_rdata : 32'b0;
 
 assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr : 
                    eret      ? `CP0_EPC       :
                                5'b11111;
 assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
-assign cp0_wdata = WS_EX ?  ws_pc : 31'b0;
+assign cp0_wdata = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
+
 
 // CP0
 CP0 CP0(
-    .clk     (clk      ),
-    .reset   (reset    ),
+    .clk        (clk        ),
+    .reset      (reset      ),
     // read
-    .raddr   (cp0_raddr),
-    .rdata   (cp0_rdata),
+    .raddr      (cp0_raddr  ),
+    .rdata      (cp0_rdata  ),
     // write
-    .waddr   (cp0_waddr),
-    .wdata   (cp0_wdata),
+    .waddr      (cp0_waddr  ),
+    .wdata      (cp0_wdata  ),
     // control
-    .ex_code (ex_code  ),
-    .bd      (bd       ),
-    .eret    (eret     ),
-    .BadVAddr(BadVAddr )
+    .ex_code    (ex_code    ),
+    .bd         (bd         ),
+    .eret       (eret       ),
+    .BadVAddr   (BadVAddr   ),
+    .pc_error   (pc_error   ),
+    // mtc0
+    .mtc0       (MTC0       ),
+    .mtc0_wdata (mtc0_wdata ),
+    .mtc0_waddr (mtc0_waddr )
     );
 endmodule

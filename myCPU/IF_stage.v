@@ -18,6 +18,7 @@ module if_stage(
     input  [31:0] inst_sram_rdata,
     // EX
     input         WS_EX          ,
+    input         ERET           ,
     input  [31:0] cp0_epc        ,
     input         DS_EX          ,
     input         ES_EX          ,
@@ -43,10 +44,13 @@ assign {br_stall, br_taken,br_target} = br_bus;
 wire [31:0] fs_inst;
 reg  [31:0] fs_pc  ;
 wire [ 4:0] ex_code;
-assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (nextpc[1:0] != 2'b0) ? `ADEL : 5'b0;
+assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : 5'b0;
 wire [31:0] BadVAddr;
-assign      BadVAddr = (ex_code == `ADEL) ? nextpc : 32'b0;
-assign fs_to_ds_bus = {BadVAddr,
+assign      BadVAddr = (ex_code == `ADEL) ? fs_pc : 32'b0;
+wire        pc_error;
+assign      pc_error = (ex_code == `ADEL);
+assign fs_to_ds_bus = {pc_error,
+                       BadVAddr,
                        ex_code ,
                        fs_inst ,
                        fs_pc   };
@@ -55,7 +59,7 @@ assign fs_to_ds_bus = {BadVAddr,
 assign to_fs_valid  = ~reset && pre_fs_ready_go;
 assign seq_pc       = fs_pc + 3'h4;
 assign nextpc       = WS_EX              ? 32'hbfc00380 : 
-                      (cp0_epc != 32'b0) ? cp0_epc      :
+                      ERET               ? cp0_epc      :
                       br_taken           ? br_target    : 
                                            seq_pc; 
 assign pre_fs_ready_go  = ~br_stall;
@@ -79,7 +83,7 @@ always @(posedge clk) begin
     if (reset) begin
         fs_pc <= 32'hbfbffffc;  //trick: to make nextpc be 0xbfc00000 during reset 
     end
-    else if (to_fs_valid && fs_allowin || WS_EX) begin
+    else if (to_fs_valid && fs_allowin || WS_EX || ERET) begin
         fs_pc <= nextpc;
     end
 end

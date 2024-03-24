@@ -51,8 +51,14 @@ module id_stage(
     input                          WS_EX        ,
     output                         DS_EX        ,
     input                          ERET         ,
+    input                          ES_ERET      ,
+    input                          MS_ERET      ,
     output                         MFC0         ,
-    output [ 2:0]                  of_test
+    output [ 2:0]                  of_test      ,
+    // CP0 WRITE
+    output                         MTC0         ,
+    output [31:0]                  mtc0_wdata   ,
+    output [ 4:0]                  mtc0_waddr
 );
 
 reg         ds_valid   ;
@@ -73,9 +79,11 @@ assign fs_pc = fs_to_ds_bus[31:0];
 wire [31:0] ds_inst ;
 wire [31:0] ds_pc   ;
 wire [31:0] BadVAddr;
+wire        pc_error;
 assign {ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
-assign BadVAddr = fs_to_ds_bus_r[101:70];
+assign BadVAddr = fs_to_ds_bus_r[100:69];
+assign pc_error = fs_to_ds_bus_r[101];
 
 wire        rf_we   ;
 wire [ 4:0] rf_waddr;
@@ -201,7 +209,8 @@ wire        eret   ;
 
 assign br_bus       = {br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {BadVAddr        ,  //182:151
+assign ds_to_es_bus = {pc_error        ,  //183:183
+                       BadVAddr        ,  //182:151
                        ex_code         ,  //150:146
                        eret            ,  //145:145
                        BD              ,  //144:144
@@ -348,7 +357,10 @@ assign SB          = inst_sb  ;
 assign SH          = inst_sh  ;
 assign SWL         = inst_swl ;
 assign SWR         = inst_swr ;
-assign MFC0        = inst_mfc0;
+assign MFC0        = inst_mfc0 & ~ERET & ~ES_ERET & ~MS_ERET;
+assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET;
+assign mtc0_wdata  = rt_value ;
+assign mtc0_waddr  = rd       ;
 assign of_test     = {inst_sub, inst_addi, inst_add};
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr | inst_j | inst_jal | inst_jalr | inst_bgezal | inst_bltzal | inst_add | inst_addi;
@@ -433,7 +445,7 @@ assign br_taken   = (  inst_beq    &  rs_eq_rt
                      | inst_jalr
                      | inst_j
                      | inst_jr
-                   ) & ds_valid;
+                   ) & ds_valid & ~ERET;
 assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez || inst_bltz || inst_bltzal || inst_bgezal) ? (fs_pc + {{14{imm[15]}}, imm[15:0], 2'b0}) :
                    (inst_jr  || inst_jalr)             ? rs_value :
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
