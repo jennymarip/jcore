@@ -20,7 +20,7 @@ module CP0(
     input  [ 4:0] mtc0_waddr
 );
 wire ex;
-assign ex = (ex_code != 5'b0);
+assign ex = (ex_code != `NO_EX);
 
 // EPC
 reg [31:0] cp0_epc;

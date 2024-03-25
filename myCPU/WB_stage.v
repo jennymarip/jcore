@@ -71,9 +71,9 @@ assign ws_to_rf_bus = {rf_we   ,  //37:37
 assign ws_ready_go = 1'b1;
 assign ws_allowin  = !ws_valid || ws_ready_go;
 always @(posedge clk) begin
-    if (reset | (ex_code != 5'b0) | eret) begin
+    if (reset | (ex_code != `NO_EX) | eret) begin
         ws_valid       <= 1'b0;
-        ms_to_ws_bus_r <= 1'b0;
+        ms_to_ws_bus_r <= {33'b0, 5'b11111,72'b0};
     end
     else if (ws_allowin) begin
         ws_valid <= ms_to_ws_valid;
@@ -98,7 +98,7 @@ assign debug_wb_rf_wnum  = ws_dest;
 assign debug_wb_rf_wdata = ws_final_result;
 
 // EX
-assign WS_EX = (ex_code != 5'b0);
+assign WS_EX = (ex_code != `NO_EX);
 assign ERET  = eret ;
 
 wire [ 4:0] cp0_raddr;

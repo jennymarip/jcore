@@ -44,7 +44,7 @@ assign {br_stall, br_taken,br_target} = br_bus;
 wire [31:0] fs_inst;
 reg  [31:0] fs_pc  ;
 wire [ 4:0] ex_code;
-assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : 5'b0;
+assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
 wire [31:0] BadVAddr;
 assign      BadVAddr = (ex_code == `ADEL) ? fs_pc : 32'b0;
 wire        pc_error;

@@ -96,7 +96,7 @@ assign {pc_error       ,  //110:110
         ms_alu_result  ,  //63:32
         ms_pc             //31:0
        } = es_to_ms_bus_r;
-assign MS_EX   = (ex_code != 5'b0);
+assign MS_EX   = (ex_code != `NO_EX);
 assign MS_ERET = eret;
 
 wire [ 7:0] single_B       ;
@@ -129,7 +129,7 @@ assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin
     if (reset | WS_EX | ERET) begin
         ms_valid       <= 1'b0;
-        es_to_ms_bus_r <= 1'b0;
+        es_to_ms_bus_r <= {33'b0,5'b11111,73'b0};
     end
     else if (ms_allowin) begin
         ms_valid <= es_to_ms_valid;

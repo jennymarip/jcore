@@ -73,7 +73,7 @@ reg         es_valid      ;
 wire        es_ready_go   ;
 
 assign      rt_value = es_rt_value;
-assign      ES_EX    = (ex_code != 5'b0) & es_valid;
+assign      ES_EX    = (ex_code != `NO_EX) & es_valid;
 
 reg         div_unfinished;
 reg         mflo;
@@ -210,7 +210,7 @@ assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
     if (reset | WS_EX | ERET) begin
         es_valid <= 1'b0;
-        ds_to_es_bus_r <= 1'b0;
+        ds_to_es_bus_r <= {33'b0,5'b11111,146'b0};
         OF_TEST <= 3'b0;
     end
     else if (es_allowin) begin
@@ -255,11 +255,11 @@ assign of_flag = ((OF_TEST_ == 3'b001) & ((sign1 == sign2) & (sign1 != sign3))) 
                  ((OF_TEST_ == 3'b010) & ((sign1 == sign2) & (sign1 != sign3))) ? 3'b010 :
                  ((OF_TEST_ == 3'b100) & ((sign1 != sign2) & (sign1 != sign3))) ? 3'b100 :
                                                                                   3'b0;
-assign ex_code = (ds_to_es_bus_r[150:146] != 5'b0) ? ds_to_es_bus_r[150:146]:
-                 (of_flag != 3'b0)                 ? `OVERFLOW : 
-                 BadAddr_R                         ? `ADEL     :
-                 BadAddr_W                         ? `ADES     :
-                                                     ds_to_es_bus_r[150:146];
+assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX) ? ds_to_es_bus_r[150:146]:
+                 (of_flag != 3'b0)                   ? `OVERFLOW : 
+                 BadAddr_R                           ? `ADEL     :
+                 BadAddr_W                           ? `ADES     :
+                                                       ds_to_es_bus_r[150:146];
 
 // HI LO reg
 reg [31:0] HI;
@@ -267,8 +267,8 @@ reg [31:0] LO;
 
 always @(posedge clk) begin
     if (reset) begin
-        HI   <= 1'b0;
-        LO   <= 1'b0;
+        HI   <= 32'b0;
+        LO   <= 32'b0;
     end
     else if (mthi & ~(WS_EX | MS_EX)) begin
         HI   <= es_rs_value;
@@ -321,7 +321,7 @@ always @(posedge clk) begin
         signed_divisor_tvalid  <=  1'b0;
         div_unfinished         <=  1'b0;
     end
-    else if (is_div & (ex_code == 5'b0) & ~MS_EX) begin
+    else if (is_div & (ex_code == `NO_EX) & ~MS_EX) begin
         signed_dividend_tvalid <= 1'b1;
         signed_divisor_tvalid  <= 1'b1;
         div_unfinished         <= 1'b1;
@@ -362,7 +362,7 @@ always @(posedge clk) begin
         unsigned_divisor_tvalid  <=  1'b0;
         div_unfinished           <=  1'b0;
     end
-    else if (is_divu & (ex_code == 5'b0) & ~MS_EX) begin
+    else if (is_divu & (ex_code == `NO_EX) & ~MS_EX) begin
         unsigned_dividend_tvalid <= 1'b1;
         unsigned_divisor_tvalid  <= 1'b1;
         div_unfinished           <= 1'b1;
@@ -401,7 +401,7 @@ always @(posedge clk) begin
     else begin
         mult_exe <= is_mult;
     end
-    if(mult_exe & (ex_code == 5'b0) & ~MS_EX) begin
+    if(mult_exe & (ex_code == `NO_EX) & ~MS_EX) begin
         HI <= mult_res[63:32];
         LO <= mult_res[31: 0];
     end
@@ -413,7 +413,7 @@ always @(posedge clk) begin
     else begin
         multu_exe <= is_multu;
     end
-    if(multu_exe & (ex_code == 5'b0) & ~MS_EX) begin
+    if(multu_exe & (ex_code == `NO_EX) & ~MS_EX) begin
         HI <= multu_res[63:32];
         LO <= multu_res[31: 0];
     end

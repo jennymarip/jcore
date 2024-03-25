@@ -20,4 +20,5 @@
     `define ADEL            5'b00100
     `define ADES            5'b00101
     `define RI              5'b01010
+    `define NO_EX           5'b11111
 `endif

@@ -64,7 +64,7 @@ module id_stage(
 reg         ds_valid   ;
 wire        ds_ready_go;
 
-assign DS_EX = (ex_code != 5'b0) & ds_valid;
+assign DS_EX = (ex_code != `NO_EX) & ds_valid;
 // branch
 wire   br_stall;
 wire   load_stall;
@@ -189,6 +189,8 @@ wire        inst_break;
 wire        inst_mtc0;
 wire        inst_mfc0;
 wire        inst_eret;
+wire        inst_no;
+wire        not_in_alu;
 
 wire        dst_is_r31;  
 wire        dst_is_rt;  
@@ -281,6 +283,7 @@ decoder_5_32 u_dec3(.in(rt  ), .out(rt_d  ));
 decoder_5_32 u_dec4(.in(rd  ), .out(rd_d  ));
 decoder_5_32 u_dec5(.in(sa  ), .out(sa_d  ));
 
+// 1 : not in alu_op
 assign inst_addu   = op_d[6'h00] & func_d[6'h21] & sa_d[5'h00];
 assign inst_add    = op_d[6'h00] & func_d[6'h20] & sa_d[5'h00];
 assign inst_subu   = op_d[6'h00] & func_d[6'h23] & sa_d[5'h00];
@@ -317,31 +320,41 @@ assign inst_sb     = op_d[6'h28];
 assign inst_sh     = op_d[6'h29];
 assign inst_swl    = op_d[6'h2a];
 assign inst_swr    = op_d[6'h2e];
-assign inst_beq    = op_d[6'h04];
-assign inst_bne    = op_d[6'h05];
-assign inst_bgez   = op_d[6'h01] & rt_d[5'h01];
-assign inst_bgtz   = op_d[6'h07] & rt_d[5'h00];
-assign inst_blez   = op_d[6'h06] & rt_d[5'h00];
-assign inst_bltz   = op_d[6'h01] & rt_d[5'h00];
+assign inst_beq    = op_d[6'h04]; // 1
+assign inst_bne    = op_d[6'h05]; // 1
+assign inst_bgez   = op_d[6'h01] & rt_d[5'h01]; // 1
+assign inst_bgtz   = op_d[6'h07] & rt_d[5'h00]; // 1 
+assign inst_blez   = op_d[6'h06] & rt_d[5'h00]; // 1
+assign inst_bltz   = op_d[6'h01] & rt_d[5'h00]; // 1
 assign inst_bgezal = op_d[6'h01] & rt_d[5'h11];
 assign inst_bltzal = op_d[6'h01] & rt_d[5'h10];
 assign inst_j      = op_d[6'h02];
 assign inst_jal    = op_d[6'h03];
-assign inst_jr     = op_d[6'h00] & func_d[6'h08] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
+assign inst_jr     = op_d[6'h00] & func_d[6'h08] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00]; // 1
 assign inst_jalr   = op_d[6'h00] & func_d[6'h09] & rt_d[5'h00] & sa_d[5'h00];
 assign inst_div    = op_d[6'h00] & func_d[6'h1a] & rd_d[5'h00] & sa_d[5'h00];
 assign inst_divu   = op_d[6'h00] & func_d[6'h1b] & rd_d[5'h00] & sa_d[5'h00];
-assign inst_mult   = op_d[6'h00] & func_d[6'h18] & rd_d[5'h00] & sa_d[5'h00];
-assign inst_multu  = op_d[6'h00] & func_d[6'h19] & rd_d[5'h00] & sa_d[5'h00];
-assign inst_mflo   = op_d[6'h00] & func_d[6'h12] & rs_d[5'h00] & rt_d[5'h00] & sa_d[5'h00];
-assign inst_mfhi   = op_d[6'h00] & func_d[6'h10] & rs_d[5'h00] & rt_d[5'h00] & sa_d[5'h00];
-assign inst_mtlo   = op_d[6'h00] & func_d[6'h13] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
-assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00];
-assign inst_syscall= op_d[6'h00] & func_d[6'h0c];
-assign inst_break  = op_d[6'h00] & func_d[6'h0d];
-assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0);
-assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0);
-assign inst_eret   = (ds_inst[31:0] == 32'h42000018);
+assign inst_mult   = op_d[6'h00] & func_d[6'h18] & rd_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_multu  = op_d[6'h00] & func_d[6'h19] & rd_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_mflo   = op_d[6'h00] & func_d[6'h12] & rs_d[5'h00] & rt_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_mfhi   = op_d[6'h00] & func_d[6'h10] & rs_d[5'h00] & rt_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_mtlo   = op_d[6'h00] & func_d[6'h13] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_mthi   = op_d[6'h00] & func_d[6'h11] & rt_d[5'h00] & rd_d[5'h00] & sa_d[5'h00]; // 1
+assign inst_syscall= op_d[6'h00] & func_d[6'h0c]; // 1
+assign inst_break  = op_d[6'h00] & func_d[6'h0d]; // 1
+assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0); // 1
+assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0); // 1
+assign inst_eret   = (ds_inst[31:0] == 32'h42000018); // 1
+
+assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz |
+                     inst_jr  |
+                     inst_mult | inst_multu |
+                     inst_mflo | inst_mfhi | inst_mtlo | inst_mthi |
+                     inst_syscall | inst_break | inst_eret |
+                     inst_mtc0 | inst_mfc0;
+
+assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
+                     
 
 assign LB          = inst_lb  ;
 assign LBU         = inst_lbu ;
@@ -459,9 +472,10 @@ always @(posedge clk) begin
 end
 
 // EX
-assign ex_code = (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL :
+assign ex_code = (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
                  inst_syscall                     ? `SYSCALL :
                  inst_break                       ? `BREAK   :
+                 inst_no                          ? `RI      :
                                                     fs_to_ds_bus_r[68:64];
 assign eret  = inst_eret   ;
 
