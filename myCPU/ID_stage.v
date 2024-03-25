@@ -49,6 +49,8 @@ module id_stage(
     output                         SWR          ,
     // EX
     input                          WS_EX        ,
+    input                          MS_EX        ,
+    input                          ES_EX        ,
     output                         DS_EX        ,
     input                          ERET         ,
     input                          ES_ERET      ,
@@ -58,7 +60,9 @@ module id_stage(
     // CP0 WRITE
     output                         MTC0         ,
     output [31:0]                  mtc0_wdata   ,
-    output [ 4:0]                  mtc0_waddr
+    output [ 4:0]                  mtc0_waddr   ,
+    // intern-core time interrupt
+    input                          time_int
 );
 
 reg         ds_valid   ;
@@ -472,7 +476,9 @@ always @(posedge clk) begin
 end
 
 // EX
-assign ex_code = (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
+assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :        
+                 time_int                         ? `INT     :
+                 (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
                  inst_syscall                     ? `SYSCALL :
                  inst_break                       ? `BREAK   :
                  inst_no                          ? `RI      :

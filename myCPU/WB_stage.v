@@ -30,7 +30,9 @@ module wb_stage(
     // MTC0 WRITE
     input         MTC0            ,
     input [31:0]  mtc0_wdata      ,
-    input [ 4:0]  mtc0_waddr
+    input [ 4:0]  mtc0_waddr      ,
+    // intern-core time interrupt
+    output        time_int
 );
 
 reg         ws_valid;
@@ -135,6 +137,8 @@ CP0 CP0(
     // mtc0
     .mtc0       (MTC0       ),
     .mtc0_wdata (mtc0_wdata ),
-    .mtc0_waddr (mtc0_waddr )
+    .mtc0_waddr (mtc0_waddr ),
+    // intern-core time interrupt
+    .time_int   (time_int   )
     );
 endmodule

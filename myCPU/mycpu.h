@@ -12,6 +12,8 @@
     `define CP0_CAUSE       5'b1101
     `define CP0_STATUS      5'b1100
     `define CP0_BadVAddr    5'b1000
+    `define CP0_COUNT       5'b1001
+    `define CP0_COMPARE     5'b1011
 
     `define SYSCALL         5'b01000
     `define BREAK           5'b01001

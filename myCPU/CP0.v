@@ -17,7 +17,9 @@ module CP0(
     // mtc0
     input         mtc0      ,
     input  [31:0] mtc0_wdata,
-    input  [ 4:0] mtc0_waddr
+    input  [ 4:0] mtc0_waddr,
+    // intern-core time interrupt
+    output        time_int
 );
 wire ex;
 assign ex = (ex_code != `NO_EX);
@@ -48,6 +50,9 @@ always @(posedge clk) begin
     if(reset) begin
         cp0_cause_ti <= 1'b0;
     end
+    else if (cp0_count == cp0_compare) begin
+        cp0_cause_ti <= 1'b1;
+    end
 end
 reg [ 7:0] cp0_cause_ip;
 always @(posedge clk) begin
@@ -56,6 +61,9 @@ always @(posedge clk) begin
     end
     else if (mtc0 & (mtc0_waddr == `CP0_CAUSE)) begin
         cp0_cause_ip[7:0] <= mtc0_wdata[15:8];
+    end
+    if (cp0_cause_ti) begin
+        cp0_cause_ip[7] <= cp0_cause_ti;
     end
 end
 reg [ 4:0] cp0_cause_excode;
@@ -76,12 +84,6 @@ always @(posedge clk) begin
 end
 reg [ 7:0] cp0_status_im;
 always @(posedge clk) begin
-    if (reset) begin
-        cp0_status_im <= 8'b11111111;
-    end
-    else if (ex) begin
-        cp0_status_im <= 8'b0;
-    end
     if (mtc0 & (mtc0_waddr == `CP0_STATUS)) begin
         cp0_status_im <= mtc0_wdata[15:8];
     end
@@ -117,10 +119,51 @@ always @(posedge clk) begin
         cp0_badvaddr <= BadVAddr;
     end
 end
+// COUNT
+reg [31:0] cp0_count;
+reg        tick     ;
+always @(posedge clk) begin
+    if (reset) begin
+        tick      <=  1'b0;
+    end
+    else begin
+        tick <= ~tick;
+    end
+    if (mtc0 & (mtc0_waddr == `CP0_COUNT)) begin
+        cp0_count <= mtc0_wdata;
+    end
+    else if (tick) begin
+        cp0_count <= cp0_count + 1'b1;
+    end
+end
+// COMPARE
+reg [31:0] cp0_compare;
+always @(posedge clk) begin
+    if (mtc0 & (mtc0_waddr == `CP0_COMPARE)) begin
+        cp0_compare  <= mtc0_wdata;
+        cp0_cause_ti <= 1'b0;
+    end
+end
+// int
+reg int;
+always @(posedge clk) begin
+    if (reset) begin
+        int <= 1'b0;
+    end
+    else if (cp0_compare == cp0_count) begin
+        int <= 1'b1;
+    end
+    else begin
+        int <= 1'b0;
+    end
+end
+assign time_int = int;
 
-assign rdata = (raddr == `CP0_EPC)      ? cp0_epc :
-               (raddr == `CP0_CAUSE)    ? {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0} :
-               (raddr == `CP0_STATUS)   ? {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie} :
+assign rdata = (raddr == `CP0_EPC     ) ? cp0_epc      :
+               (raddr == `CP0_CAUSE   ) ? {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0} :
+               (raddr == `CP0_STATUS  ) ? {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie} :
                (raddr == `CP0_BadVAddr) ? cp0_badvaddr :
+               (raddr == `CP0_COUNT   ) ? cp0_count    :
+               (raddr == `CP0_COMPARE ) ? cp0_compare  :
                32'b0;
 endmodule

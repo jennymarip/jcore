@@ -102,6 +102,7 @@ wire        MTC0      ;
 wire [31:0] mtc0_wdata;
 wire [ 4:0] mtc0_waddr;
 wire        ES_ERET   ;
+wire        time_int  ;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -152,6 +153,8 @@ id_stage id_stage(
     .SWR           (SWR           ),
     // EX
     .WS_EX         (WS_EX         ),
+    .MS_EX         (MS_EX         ),
+    .ES_EX         (ES_EX         ),
     .DS_EX         (DS_EX         ),
     .ERET          (ERET          ),
     .ES_ERET       (ES_ERET       ),
@@ -161,7 +164,9 @@ id_stage id_stage(
     // CP0 WRITE
     .MTC0          (MTC0          ),
     .mtc0_wdata    (mtc0_wdata    ),
-    .mtc0_waddr    (mtc0_waddr    )
+    .mtc0_waddr    (mtc0_waddr    ),
+    // intern-core time interrupt
+    .time_int      (time_int      )
 );
 wire [ 1:0] LDB      ;
 wire        _LB      ;
@@ -314,7 +319,9 @@ wb_stage wb_stage(
     // MTC0 WRITE
     .MTC0             (MTC0             ),
     .mtc0_wdata       (mtc0_wdata       ),
-    .mtc0_waddr       (mtc0_waddr       )
+    .mtc0_waddr       (mtc0_waddr       ),
+    // intern-core time interrupt
+    .time_int         (time_int         )
 );
 
 endmodule
