@@ -61,8 +61,9 @@ module id_stage(
     output                         MTC0         ,
     output [31:0]                  mtc0_wdata   ,
     output [ 4:0]                  mtc0_waddr   ,
-    // intern-core time interrupt
-    input                          time_int
+    // interrupt
+    input  [31:0]                  cause        ,
+    input  [31:0]                  status
 );
 
 reg         ds_valid   ;
@@ -476,8 +477,10 @@ always @(posedge clk) begin
 end
 
 // EX
+wire   interrupt;
+assign interrupt = ((cause[15:8] & status[15:8]) != 8'b0) && (status[1:0] == 2'b01);
 assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :        
-                 time_int                         ? `INT     :
+                 interrupt                        ? `INT     :
                  (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
                  inst_syscall                     ? `SYSCALL :
                  inst_break                       ? `BREAK   :

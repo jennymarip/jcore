@@ -18,11 +18,14 @@ module CP0(
     input         mtc0      ,
     input  [31:0] mtc0_wdata,
     input  [ 4:0] mtc0_waddr,
-    // intern-core time interrupt
-    output        time_int
+    // interrupt generate
+    output [31:0] cause     ,
+    output [31:0] status
 );
 wire ex;
-assign ex = (ex_code != `NO_EX);
+assign ex     = (ex_code != `NO_EX);
+assign cause  = cp0_cause;
+assign status = cp0_status;
 
 // EPC
 reg [31:0] cp0_epc;
@@ -36,6 +39,7 @@ always @(posedge clk) begin
     end
 end
 // CAUSE
+wire [31:0] cp0_cause;
 reg cp0_cause_bd;
 always @(posedge clk) begin
     if (reset) begin
@@ -45,12 +49,14 @@ always @(posedge clk) begin
         cp0_cause_bd <= bd;
     end
 end
-reg cp0_cause_ti;
+reg    cp0_cause_ti;
+wire   count_eq_compare;
+assign count_eq_compare = (cp0_count == cp0_compare);
 always @(posedge clk) begin
     if(reset) begin
         cp0_cause_ti <= 1'b0;
     end
-    else if (cp0_count == cp0_compare) begin
+    else if (count_eq_compare) begin
         cp0_cause_ti <= 1'b1;
     end
 end
@@ -75,7 +81,9 @@ always @(posedge clk) begin
         cp0_cause_excode <= ex_code;
     end
 end
+assign cp0_cause = {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0};
 // STATUS
+wire [31:0] cp0_status;
 reg cp0_status_bev;
 always @(posedge clk) begin
     if (reset) begin
@@ -109,6 +117,7 @@ always @(posedge clk) begin
         cp0_status_ie <= mtc0_wdata[0];
     end
 end
+assign cp0_status = {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie};
 // BadVAddr
 reg [31: 0] cp0_badvaddr;
 always @(posedge clk) begin
@@ -145,23 +154,11 @@ always @(posedge clk) begin
     end
 end
 // int
-reg int;
-always @(posedge clk) begin
-    if (reset) begin
-        int <= 1'b0;
-    end
-    else if (cp0_compare == cp0_count) begin
-        int <= 1'b1;
-    end
-    else begin
-        int <= 1'b0;
-    end
-end
-assign time_int = int;
+assign time_int = (cp0_count == cp0_compare);
 
 assign rdata = (raddr == `CP0_EPC     ) ? cp0_epc      :
-               (raddr == `CP0_CAUSE   ) ? {cp0_cause_bd,cp0_cause_ti,14'b0,cp0_cause_ip[7:0],1'b0,cp0_cause_excode[4:0],2'b0} :
-               (raddr == `CP0_STATUS  ) ? {9'b0, cp0_status_bev, 6'b0,cp0_status_im, 6'b0, cp0_status_exl, cp0_status_ie} :
+               (raddr == `CP0_CAUSE   ) ? cp0_cause    :
+               (raddr == `CP0_STATUS  ) ? cp0_status   :
                (raddr == `CP0_BadVAddr) ? cp0_badvaddr :
                (raddr == `CP0_COUNT   ) ? cp0_count    :
                (raddr == `CP0_COMPARE ) ? cp0_compare  :

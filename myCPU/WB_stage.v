@@ -31,8 +31,9 @@ module wb_stage(
     input         MTC0            ,
     input [31:0]  mtc0_wdata      ,
     input [ 4:0]  mtc0_waddr      ,
-    // intern-core time interrupt
-    output        time_int
+    // interrupt
+    output [31:0] cause           ,
+    output [31:0] status
 );
 
 reg         ws_valid;
@@ -117,7 +118,6 @@ assign cp0_raddr = mfc0_read ? mfc0_cp0_raddr :
 assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
 assign cp0_wdata = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
 
-
 // CP0
 CP0 CP0(
     .clk        (clk        ),
@@ -138,7 +138,8 @@ CP0 CP0(
     .mtc0       (MTC0       ),
     .mtc0_wdata (mtc0_wdata ),
     .mtc0_waddr (mtc0_waddr ),
-    // intern-core time interrupt
-    .time_int   (time_int   )
+    // interrupt generate
+    .cause      (cause      ),
+    .status     (status     )
     );
 endmodule

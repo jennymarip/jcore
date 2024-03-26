@@ -102,7 +102,8 @@ wire        MTC0      ;
 wire [31:0] mtc0_wdata;
 wire [ 4:0] mtc0_waddr;
 wire        ES_ERET   ;
-wire        time_int  ;
+wire [31:0] cause     ;
+wire [31:0] status    ;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -165,8 +166,9 @@ id_stage id_stage(
     .MTC0          (MTC0          ),
     .mtc0_wdata    (mtc0_wdata    ),
     .mtc0_waddr    (mtc0_waddr    ),
-    // intern-core time interrupt
-    .time_int      (time_int      )
+    // interrupt
+    .cause         (cause         ),
+    .status        (status        )
 );
 wire [ 1:0] LDB      ;
 wire        _LB      ;
@@ -320,8 +322,9 @@ wb_stage wb_stage(
     .MTC0             (MTC0             ),
     .mtc0_wdata       (mtc0_wdata       ),
     .mtc0_waddr       (mtc0_waddr       ),
-    // intern-core time interrupt
-    .time_int         (time_int         )
+    // interrupt
+    .cause            (cause            ),
+    .status           (status           )
 );
 
 endmodule
