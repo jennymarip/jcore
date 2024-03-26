@@ -14,6 +14,7 @@ module id_stage(
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus  ,
     //to fs
     output [`BR_BUS_WD       -1:0] br_bus        ,
+    output                         is_branch     ,
     //to rf: for write back
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus  ,
     //from es,ms,ws data dependence
@@ -63,7 +64,9 @@ module id_stage(
     output [ 4:0]                  mtc0_waddr   ,
     // interrupt
     input  [31:0]                  cause        ,
-    input  [31:0]                  status
+    input  [31:0]                  status       ,
+    // slot
+    input                          _BD
 );
 
 reg         ds_valid   ;
@@ -442,10 +445,17 @@ assign rt_value = rt_wait ? (rt == EXE_dest ?  EXE_dest_data :
                             : rf_rdata2;
 
 // BU
-reg bd;
-wire BD;
+reg    BD;
+assign is_branch = (inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz | inst_bltzal | inst_bgezal | inst_jal | inst_jalr | inst_j | inst_jr) & ds_valid;
 
-assign BD = bd;
+always @(posedge clk) begin
+    if (reset) begin
+        BD <= 1'b0;
+    end
+    else begin
+        BD <= _BD;
+    end
+end
 assign rs_eq_rt   = (rs_value == rt_value);
 assign rs_ge_zero = ($signed(rs_value) >= 0);
 assign rs_gt_zero = ($signed(rs_value)  > 0);
@@ -467,14 +477,6 @@ assign br_taken   = (  inst_beq    &  rs_eq_rt
 assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez || inst_bltz || inst_bltzal || inst_bgezal) ? (fs_pc + {{14{imm[15]}}, imm[15:0], 2'b0}) :
                    (inst_jr  || inst_jalr)             ? rs_value :
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
-always @(posedge clk) begin
-    if(reset) begin
-        bd <= 1'b0;
-    end
-    else begin
-        bd <= br_taken;
-    end
-end
 
 // EX
 wire   interrupt;

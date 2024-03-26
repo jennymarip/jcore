@@ -22,7 +22,10 @@ module if_stage(
     input  [31:0] cp0_epc        ,
     input         DS_EX          ,
     input         ES_EX          ,
-    input         MS_EX
+    input         MS_EX          ,
+    // branch slot
+    input         is_branch      ,
+    output        BD
 );
 
 reg         fs_valid;
@@ -94,5 +97,10 @@ assign inst_sram_addr  = {nextpc[31:2], 2'b0};
 assign inst_sram_wdata = 32'b0;
 
 assign fs_inst         = inst_sram_rdata;
+
+// slot
+wire bd;
+assign bd = is_branch;
+assign BD = bd;
 
 endmodule

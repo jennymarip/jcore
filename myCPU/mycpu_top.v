@@ -52,6 +52,8 @@ wire          ERET   ;
 
 wire DS_EX;
 wire ES_EX;
+wire is_branch;
+wire BD;
 
 // IF stage
 if_stage if_stage(
@@ -76,7 +78,10 @@ if_stage if_stage(
     .cp0_epc        (cp0_epc        ),
     .DS_EX          (DS_EX          ),
     .ES_EX          (ES_EX          ),
-    .MS_EX          (MS_EX          )
+    .MS_EX          (MS_EX          ),
+    // branch slot
+    .is_branch      (is_branch      ),
+    .BD             (BD             )
 );
 wire        is_div    ;
 wire        is_divu   ;
@@ -119,6 +124,7 @@ id_stage id_stage(
     .ds_to_es_bus   (ds_to_es_bus   ),
     //to fs
     .br_bus         (br_bus         ),
+    .is_branch      (is_branch      ),
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
     //from es,ms,ws
@@ -168,7 +174,9 @@ id_stage id_stage(
     .mtc0_waddr    (mtc0_waddr    ),
     // interrupt
     .cause         (cause         ),
-    .status        (status        )
+    .status        (status        ),
+    // slot
+    ._BD            (BD            )
 );
 wire [ 1:0] LDB      ;
 wire        _LB      ;
