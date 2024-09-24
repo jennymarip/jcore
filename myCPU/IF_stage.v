@@ -11,26 +11,26 @@ module if_stage(
     output                         fs_to_ds_valid ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,
     // inst sram interface
-    output        inst_sram_en   ,
-    output [ 3:0] inst_sram_wen  ,
-    output [31:0] inst_sram_addr ,
-    output [31:0] inst_sram_wdata,
-    input  [31:0] inst_sram_rdata,
+    output                         inst_sram_en   ,
+    output [ 3:0]                  inst_sram_wen  ,
+    output [31:0]                  inst_sram_addr ,
+    output [31:0]                  inst_sram_wdata,
+    input  [31:0]                  inst_sram_rdata,
     // EX
-    input         WS_EX          ,
-    input         ERET           ,
-    input  [31:0] cp0_epc        ,
-    input         DS_EX          ,
-    input         ES_EX          ,
-    input         MS_EX          ,
+    input                          ERET           ,
+    input  [31:0]                  cp0_epc        ,
+    input                          DS_EX          ,
+    input                          ES_EX          ,
+    input                          MS_EX          ,
+    input                          WS_EX          ,
     // branch slot
-    input         is_branch      ,
-    output        BD
+    input                          is_branch      ,
+    output                         BD
 );
 
-reg         fs_valid;
+reg         fs_valid   ;
 wire        fs_ready_go;
-wire        fs_allowin;
+wire        fs_allowin ;
 wire        to_fs_valid;
 
 wire [31:0] seq_pc;
@@ -38,20 +38,22 @@ wire [31:0] nextpc;
 
 wire         pre_fs_ready_go;
 
-wire         br_stall;
-wire         br_taken;
+wire         br_stall ;
+wire         br_taken ;
 wire [ 31:0] br_target;
 assign {br_stall, br_taken,br_target} = br_bus;
 
 // EX test
-wire [31:0] fs_inst;
-reg  [31:0] fs_pc  ;
-wire [ 4:0] ex_code;
-assign      ex_code = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
+wire [31:0] fs_inst ;
+reg  [31:0] fs_pc   ;
+wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
-assign      BadVAddr = (ex_code == `ADEL) ? fs_pc : 32'b0;
 wire        pc_error;
-assign      pc_error = (ex_code == `ADEL);
+
+assign fs_inst      = inst_sram_rdata;
+assign ex_code      = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
+assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0;
+assign pc_error     = (ex_code == `ADEL);
 assign fs_to_ds_bus = {pc_error,
                        BadVAddr,
                        ex_code ,
@@ -73,6 +75,7 @@ assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go;
 
 always @(posedge clk) begin
+    // set fs_valid
     if (reset) begin
         fs_valid <= 1'b0;
     end
@@ -82,9 +85,9 @@ always @(posedge clk) begin
     else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
     end
-
+    // set fs_pc
     if (reset) begin
-        fs_pc <= 32'hbfbffffc;  //trick: to make nextpc be 0xbfc00000 during reset 
+        fs_pc <= 32'hbfbffffc;  // trick: to make seq_pc be 0xbfc00000 during reset 
     end
     else if (to_fs_valid && fs_allowin || WS_EX || ERET) begin
         fs_pc <= nextpc;
@@ -96,11 +99,7 @@ assign inst_sram_wen   = 4'h0;
 assign inst_sram_addr  = {nextpc[31:2], 2'b0};
 assign inst_sram_wdata = 32'b0;
 
-assign fs_inst         = inst_sram_rdata;
-
 // slot
-wire bd;
-assign bd = is_branch;
-assign BD = bd;
+assign BD = is_branch;
 
 endmodule

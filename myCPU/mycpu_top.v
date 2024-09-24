@@ -73,12 +73,12 @@ if_stage if_stage(
     .inst_sram_wdata(inst_sram_wdata),
     .inst_sram_rdata(inst_sram_rdata),
     // EX
-    .WS_EX          (WS_EX          ),
     .ERET           (ERET           ),
     .cp0_epc        (cp0_epc        ),
     .DS_EX          (DS_EX          ),
     .ES_EX          (ES_EX          ),
     .MS_EX          (MS_EX          ),
+    .WS_EX          (WS_EX          ),
     // branch slot
     .is_branch      (is_branch      ),
     .BD             (BD             )
