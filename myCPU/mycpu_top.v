@@ -50,11 +50,13 @@ wire          WS_EX  ;
 wire [31:0]   cp0_epc;
 wire          ERET   ;
 
-wire DS_EX;
-wire ES_EX;
+wire DS_EX    ;
+wire ES_EX    ;
 wire is_branch;
-wire BD;
-
+wire BD       ;
+// EX word
+wire [3:0] ex_word;
+assign     ex_word = {DS_EX, ES_EX, MS_EX, WS_EX};
 // IF stage
 if_stage if_stage(
     .clk            (clk            ),
@@ -75,10 +77,7 @@ if_stage if_stage(
     // EX
     .ERET           (ERET           ),
     .cp0_epc        (cp0_epc        ),
-    .DS_EX          (DS_EX          ),
-    .ES_EX          (ES_EX          ),
-    .MS_EX          (MS_EX          ),
-    .WS_EX          (WS_EX          ),
+    .ex_word        (ex_word        ),
     // branch slot
     .is_branch      (is_branch      ),
     .BD             (BD             )

@@ -16,13 +16,10 @@ module if_stage(
     output [31:0]                  inst_sram_addr ,
     output [31:0]                  inst_sram_wdata,
     input  [31:0]                  inst_sram_rdata,
-    // EX
+    // EX (ex_word[DS, ES, MS, WS])
     input                          ERET           ,
     input  [31:0]                  cp0_epc        ,
-    input                          DS_EX          ,
-    input                          ES_EX          ,
-    input                          MS_EX          ,
-    input                          WS_EX          ,
+    input  [ 3:0]                  ex_word        ,
     // branch slot
     input                          is_branch      ,
     output                         BD
@@ -44,14 +41,16 @@ wire [ 31:0] br_target;
 assign {br_stall, br_taken,br_target} = br_bus;
 
 // EX test
+wire        WS_EX   ;
 wire [31:0] fs_inst ;
 reg  [31:0] fs_pc   ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
 wire        pc_error;
 
+assign WS_EX        = ex_word[0]     ;
 assign fs_inst      = inst_sram_rdata;
-assign ex_code      = ~DS_EX & ~ES_EX & ~MS_EX & ~WS_EX & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
+assign ex_code      = (ex_word == 4'b0) & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
 assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0;
 assign pc_error     = (ex_code == `ADEL);
 assign fs_to_ds_bus = {pc_error,

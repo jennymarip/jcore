@@ -201,14 +201,14 @@ wire        inst_no;
 wire        not_in_alu;
 
 wire        dst_is_r31;  
-wire        dst_is_rt;  
+wire        dst_is_rt ;  
 
 wire [ 4:0] rf_raddr1;
 wire [31:0] rf_rdata1;
 wire [ 4:0] rf_raddr2;
 wire [31:0] rf_rdata2;
 
-wire        rs_eq_rt;
+wire        rs_eq_rt  ;
 wire        rs_ge_zero;
 wire        rs_gt_zero;
 wire        rs_le_zero;
@@ -245,8 +245,8 @@ wire   src1_no_rs;    //指令 rs 域非 0，且不是从寄存器堆读 rs 的�
 wire   src2_no_rt;    //指令 rt 域非 0，且不是从寄存器堆读 rt 的数据
 assign src1_no_rs = 1'b0;
 assign src2_no_rt = inst_addiu | (load_op & ~inst_lwl & ~inst_lwr) | inst_jal | inst_lui | inst_j | inst_syscall | inst_break;
-wire   rs_wait;       //与源操作数rs对应的寄存器号一致
-wire   rt_wait;		  //与源操作数rt对应的寄存器号一致
+wire   rs_wait;       // the value of rs has not ready in rs
+wire   rt_wait;		  // the value of rt has not ready in rt
 assign rs_wait    = ~src1_no_rs & (rs!=5'd0) 
                  & ( (rs==EXE_dest) | (rs==MEM_dest) | (rs==WB_dest) );
 assign rt_wait    = ~src2_no_rt & (rt!=5'd0)
