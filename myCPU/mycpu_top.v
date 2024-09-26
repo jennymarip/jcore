@@ -82,10 +82,7 @@ if_stage if_stage(
     .is_branch      (is_branch      ),
     .BD             (BD             )
 );
-wire        is_div    ;
-wire        is_divu   ;
-wire        is_mult   ;
-wire        is_multu  ;
+wire[3:0]   dm_word   ;
 wire        LB        ;
 wire        LBU       ;
 wire        LH        ;
@@ -135,11 +132,8 @@ id_stage id_stage(
     .EXE_dest_data (EXE_dest_data ),
     .MEM_dest_data (MEM_dest_data ),
     .WB_dest_data  (WB_dest_data  ),
-    // is div / divu / mult / multu
-    .is_div        (is_div        ),
-    .is_divu       (is_divu       ),
-    .is_mult       (is_mult       ),
-    .is_multu      (is_multu      ),
+    // word of div and mul (div / divu / mult / multu)
+    .dm_word       (dm_word       ),
     // LB / LBU / LH / LHU / LWL / LWR
     .LB            (LB            ),
     .LBU           (LBU           ),
@@ -214,11 +208,8 @@ exe_stage exe_stage(
     .es_load_op     (es_load_op     ),
     //forward
     .EXE_dest_data  (EXE_dest_data  ),
-    // is div / divu / mult / multu
-    .is_div         (is_div         ),
-    .is_divu        (is_divu        ),
-    .is_mult        (is_mult        ),
-    .is_multu       (is_multu       ),
+    // word of div and mul (div / divu / mult / multu)
+    .dm_word       (dm_word         ),
     // LB / LBU / LH / LHU / LWL / LWR & LDB
     .LB             (LB             ),
     .LBU            (LBU            ),

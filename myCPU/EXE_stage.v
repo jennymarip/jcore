@@ -22,11 +22,8 @@ module exe_stage(
     output        es_load_op    ,
     // forward
     output [31:0] EXE_dest_data ,
-    // is div / divu / mult / multu
-    input         is_div        ,
-    input         is_divu       ,
-    input         is_mult       ,
-    input         is_multu      ,
+    // word of div and mul (div / divu / mult / multu)
+    input  [ 3:0] dm_word       ,
     // LB / LBU / LH / LHU / LWL / LWR & LDB
     input         LB            ,
     input         LBU           ,
@@ -279,6 +276,8 @@ always @(posedge clk) begin
 end
 
 // DIV, DIVU
+wire        is_div              ;
+wire        is_divu             ;
 wire [31:0] divider_dividend    ;
 wire [31:0] divider_divisor     ;
 wire [63:0] signed_divider_res  ;
@@ -286,6 +285,8 @@ wire [63:0] unsigned_divider_res;
 reg  [31:0] quotient            ;
 reg  [31:0] remainder           ;
 
+assign is_div           = dm_word[3] ;
+assign is_divu          = dm_word[2] ;
 assign divider_dividend = es_rs_value;
 assign divider_divisor  = es_rt_value;
 
@@ -386,13 +387,17 @@ always @(posedge clk) begin
 end
 
 // MULT, MULTU
+wire        is_mult  ;
+wire        is_multu ;
 reg         mult_exe ;
 wire [63:0] mult_res ;
 reg         multu_exe;
 wire [63:0] multu_res;
 
+assign is_mult   = dm_word[1]                                 ;
+assign is_multu  = dm_word[0]                                 ;
 assign mult_res  = $signed(es_rs_value) * $signed(es_rt_value);
-assign multu_res = es_rs_value * es_rt_value;
+assign multu_res = es_rs_value * es_rt_value                  ;
 
 always @(posedge clk) begin
     if (reset) begin

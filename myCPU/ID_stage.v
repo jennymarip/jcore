@@ -26,11 +26,8 @@ module id_stage(
     input  [31:0]                  EXE_dest_data,
     input  [31:0]                  MEM_dest_data,
     input  [31:0]                  WB_dest_data ,
-    // is div / divu / mult / multu
-    output                         is_div       ,
-    output                         is_divu      ,
-    output                         is_mult      ,
-    output                         is_multu     ,
+    // word of div and mul (div / divu / mult / multu)
+    output [ 3:0]                  dm_word      ,
     // LB / LBU / LH / LHU / LWL / LWR
     output                         LB           ,
     output                         LBU          ,
@@ -400,10 +397,11 @@ assign alu_op[12] = inst_div;
 assign alu_op[13] = inst_divu;
 
 assign load_op   = inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr;
-assign is_div    = inst_div  ;
-assign is_divu   = inst_divu ;
-assign is_mult   = inst_mult ;
-assign is_multu  = inst_multu;
+assign dm_word   = {inst_div ,
+                    inst_divu,
+                    inst_mult,
+                    inst_multu
+                   };
 
 assign src1_is_sa       = inst_sll   | inst_srl | inst_sra;
 assign src1_is_pc       = inst_jal | inst_jalr | inst_bltzal | inst_bgezal;
