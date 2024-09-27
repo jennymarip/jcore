@@ -8,6 +8,8 @@
     `define MS_TO_WS_BUS_WD     110
     `define WS_TO_RF_BUS_WD      38
 
+    `define ST_WORD_LEN           4
+
     `define CP0_EPC         5'b1110
     `define CP0_CAUSE       5'b1101
     `define CP0_STATUS      5'b1100

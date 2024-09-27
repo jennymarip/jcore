@@ -40,11 +40,8 @@ module id_stage(
     output                         MFHI         ,
     output                         MTLO         ,
     output                         MTHI         ,
-    // SB / SH / SWL / SWR
-    output                         SB           ,
-    output                         SH           ,
-    output                         SWL          ,
-    output                         SWR          ,
+    // st_word (SB / SH / SWL / SWR)
+    output [`ST_WORD_LEN -1 :0]    st_word      ,
     // EX
     input                          WS_EX        ,
     input                          MS_EX        ,
@@ -371,15 +368,12 @@ assign MFLO        = inst_mflo;
 assign MFHI        = inst_mfhi;
 assign MTLO        = inst_mtlo;
 assign MTHI        = inst_mthi;
-assign SB          = inst_sb  ;
-assign SH          = inst_sh  ;
-assign SWL         = inst_swl ;
-assign SWR         = inst_swr ;
+assign st_word     = {inst_sb, inst_sh, inst_swl, inst_swr} ;
 assign MFC0        = inst_mfc0 & ~ERET & ~ES_ERET & ~MS_ERET;
 assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET;
 assign mtc0_wdata  = rt_value ;
 assign mtc0_waddr  = rd       ;
-assign of_test     = {inst_sub, inst_addi, inst_add};
+assign of_test     = {inst_sub, inst_addi, inst_add}        ;
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr | inst_j | inst_jal | inst_jalr | inst_bgezal | inst_bltzal | inst_add | inst_addi;
 assign alu_op[ 1] = inst_subu | inst_sub;

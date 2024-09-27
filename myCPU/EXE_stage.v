@@ -45,11 +45,8 @@ module exe_stage(
     input         MTHI          ,
     // rt
     output [31:0] rt_value      ,
-    // SB / SH / SWL / SWR
-    input         SB            ,
-    input         SH            ,
-    input         SWL           ,
-    input         SWR           ,
+    // st_word (SB / SH / SWL / SWR)
+    input [`ST_WORD_LEN - 1 :0] st_word,
     // EX
     input         WS_EX         ,
     input         MS_EX         ,
@@ -107,21 +104,18 @@ always @(posedge clk) begin
         mfc0 <= 1'b0;
     end
     else begin
-        mflo <= MFLO;
-        mfhi <= MFHI;
-        mtlo <= MTLO;
-        mthi <= MTHI;
-        lb   <= LB  ;
-        lbu  <= LBU ;
-        lh   <= LH  ;
-        lhu  <= LHU ;
-        lwl  <= LWL ;
-        lwr  <= LWR ;
-        sb   <= SB  ;
-        sh   <= SH  ;
-        swl  <= SWL ;
-        swr  <= SWR ;
-        mfc0 <= MFC0;
+        mflo               <= MFLO   ;
+        mfhi               <= MFHI   ;
+        mtlo               <= MTLO   ;
+        mthi               <= MTHI   ;
+        lb                 <= LB     ;
+        lbu                <= LBU    ;
+        lh                 <= LH     ;
+        lhu                <= LHU    ;
+        lwl                <= LWL    ;
+        lwr                <= LWR    ;
+        {sb, sh, swl, swr} <= st_word;
+        mfc0               <= MFC0   ;
     end
 end
 

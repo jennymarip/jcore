@@ -82,29 +82,26 @@ if_stage if_stage(
     .is_branch      (is_branch      ),
     .BD             (BD             )
 );
-wire[3:0]   dm_word   ;
-wire        LB        ;
-wire        LBU       ;
-wire        LH        ;
-wire        LHU       ;
-wire        LWL       ;
-wire        LWR       ;
-wire        MFLO      ; 
-wire        MFHI      ; 
-wire        MTLO      ;
-wire        MTHI      ;
-wire        SB        ;
-wire        SH        ; 
-wire        SWL       ; 
-wire        SWR       ; 
-wire        MFC0      ; 
-wire [ 2:0] of_test   ;
-wire        MTC0      ;
-wire [31:0] mtc0_wdata;
-wire [ 4:0] mtc0_waddr;
-wire        ES_ERET   ;
-wire [31:0] cause     ;
-wire [31:0] status    ;
+wire [ 3:0]               dm_word   ;
+wire                      LB        ;
+wire                      LBU       ;
+wire                      LH        ;
+wire                      LHU       ;
+wire                      LWL       ;
+wire                      LWR       ;
+wire                      MFLO      ; 
+wire                      MFHI      ; 
+wire                      MTLO      ;
+wire                      MTHI      ;
+wire [ `ST_WORD_LEN -1:0] st_word   ;
+wire                      MFC0      ; 
+wire [ 2:0]               of_test   ;
+wire                      MTC0      ;
+wire [31:0]               mtc0_wdata;
+wire [ 4:0]               mtc0_waddr;
+wire                      ES_ERET   ;
+wire [31:0]               cause     ;
+wire [31:0]               status    ;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -146,11 +143,8 @@ id_stage id_stage(
     .MFHI          (MFHI          ),
     .MTLO          (MTLO          ),
     .MTHI          (MTHI          ),
-    // SB / SH / SWL / SWR
-    .SB            (SB            ),
-    .SH            (SH            ),
-    .SWL           (SWL           ),
-    .SWR           (SWR           ),
+    // st_word (SB / SH / SWL / SWR)
+    .st_word       (st_word       ),
     // EX
     .WS_EX         (WS_EX         ),
     .MS_EX         (MS_EX         ),
@@ -231,11 +225,8 @@ exe_stage exe_stage(
     .MTHI           (MTHI           ),
     // rt
     .rt_value       (rt_value       ),
-    // SB / SH / SWL / SWR
-    .SB             (SB             ),
-    .SH             (SH             ),
-    .SWL            (SWL            ),
-    .SWR            (SWR            ),
+    // st_word (SB / SH / SWL / SWR)
+    .st_word        (st_word        ),
     // EX
     .WS_EX          (WS_EX          ),
     .MS_EX          (MS_EX          ),
