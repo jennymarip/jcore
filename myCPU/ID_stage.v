@@ -28,13 +28,8 @@ module id_stage(
     input  [31:0]                  WB_dest_data ,
     // word of div and mul (div / divu / mult / multu)
     output [ 3:0]                  dm_word      ,
-    // LB / LBU / LH / LHU / LWL / LWR
-    output                         LB           ,
-    output                         LBU          ,
-    output                         LH           ,
-    output                         LHU          ,
-    output                         LWL          ,
-    output                         LWR          ,
+    // ld_word (LB / LBU / LH / LHU / LWL / LWR)
+    output [`LD_WORD_LEN - 1 :0]   ld_word      ,
     // MFLO, MFHI, MTHI, MTLO
     output                         MFLO         ,
     output                         MFHI         ,
@@ -358,12 +353,7 @@ assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | i
 assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
                      
 
-assign LB          = inst_lb  ;
-assign LBU         = inst_lbu ;
-assign LH          = inst_lh  ;
-assign LHU         = inst_lhu ;
-assign LWL         = inst_lwl ;
-assign LWR         = inst_lwr ;
+assign ld_word     = {inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr};
 assign MFLO        = inst_mflo;
 assign MFHI        = inst_mfhi;
 assign MTLO        = inst_mtlo;

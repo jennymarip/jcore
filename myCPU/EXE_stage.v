@@ -24,20 +24,15 @@ module exe_stage(
     output [31:0] EXE_dest_data ,
     // word of div and mul (div / divu / mult / multu)
     input  [ 3:0] dm_word       ,
-    // LB / LBU / LH / LHU / LWL / LWR & LDB
-    input         LB            ,
-    input         LBU           ,
-    input         LH            ,
-    input         LHU           ,
-    input         LWL           ,
-    input         LWR           ,
-    output [ 1:0] LDB           ,
-    output        _LB           ,
-    output        _LBU          ,
-    output        _LH           ,
-    output        _LHU          ,
-    output        _LWL          ,
-    output        _LWR          ,
+    /// ld_word LB / LBU / LH / LHU / LWL / LWR & LDB
+    input  [`LD_WORD_LEN - 1 :0] ld_word,
+    output [ 1:0] LDB                   ,
+    output        _LB                   ,
+    output        _LBU                  ,
+    output        _LH                   ,
+    output        _LHU                  ,
+    output        _LWL                  ,
+    output        _LWR                  ,
     // MFLO, MFHI, MTHI, MTLO
     input         MFLO          ,
     input         MFHI          ,
@@ -104,34 +99,29 @@ always @(posedge clk) begin
         mfc0 <= 1'b0;
     end
     else begin
-        mflo               <= MFLO   ;
-        mfhi               <= MFHI   ;
-        mtlo               <= MTLO   ;
-        mthi               <= MTHI   ;
-        lb                 <= LB     ;
-        lbu                <= LBU    ;
-        lh                 <= LH     ;
-        lhu                <= LHU    ;
-        lwl                <= LWL    ;
-        lwr                <= LWR    ;
-        {sb, sh, swl, swr} <= st_word;
-        mfc0               <= MFC0   ;
+        mflo                         <= MFLO   ;
+        mfhi                         <= MFHI   ;
+        mtlo                         <= MTLO   ;
+        mthi                         <= MTHI   ;
+        {lb, lbu, lh, lhu, lwl, lwr} <= ld_word;
+        {sb, sh, swl, swr}           <= st_word;
+        mfc0                         <= MFC0   ;
     end
 end
 
-assign _LB  = lb ;
-assign _LBU = lbu;
-assign _LH  = lh ;
-assign _LHU = lhu;
-assign _LWL = lwl;
-assign _LWR = lwr;
-assign _MFC0= mfc0;
+assign _LB   = lb  ;
+assign _LBU  = lbu ;
+assign _LH   = lh  ;
+assign _LHU  = lhu ;
+assign _LWL  = lwl ;
+assign _LWR  = lwr ;
+assign _MFC0 = mfc0;
 wire   _LW;
-assign _LW = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
-wire   SW;
+assign _LW   = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
+wire   SW ;
 wire   _SH;
-assign SW = es_mem_we & ~sb & ~sh & ~swl & ~swr;
-assign _SH = sh;
+assign SW    = es_mem_we & ~sb & ~sh & ~swl & ~swr;
+assign _SH   = sh;
 
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 wire [13:0] es_alu_op          ;

@@ -83,12 +83,7 @@ if_stage if_stage(
     .BD             (BD             )
 );
 wire [ 3:0]               dm_word   ;
-wire                      LB        ;
-wire                      LBU       ;
-wire                      LH        ;
-wire                      LHU       ;
-wire                      LWL       ;
-wire                      LWR       ;
+wire [ `LD_WORD_LEN -1:0] ld_word   ;
 wire                      MFLO      ; 
 wire                      MFHI      ; 
 wire                      MTLO      ;
@@ -131,13 +126,8 @@ id_stage id_stage(
     .WB_dest_data  (WB_dest_data  ),
     // word of div and mul (div / divu / mult / multu)
     .dm_word       (dm_word       ),
-    // LB / LBU / LH / LHU / LWL / LWR
-    .LB            (LB            ),
-    .LBU           (LBU           ),
-    .LH            (LH            ),
-    .LHU           (LHU           ),
-    .LWL           (LWL           ),
-    .LWR           (LWR           ),
+    // ld_word (LB / LBU / LH / LHU / LWL / LWR)
+    .ld_word       (ld_word       ),
     // MFLO, MFHI, MTLO, MTHI
     .MFLO          (MFLO          ),
     .MFHI          (MFHI          ),
@@ -203,14 +193,9 @@ exe_stage exe_stage(
     //forward
     .EXE_dest_data  (EXE_dest_data  ),
     // word of div and mul (div / divu / mult / multu)
-    .dm_word       (dm_word         ),
-    // LB / LBU / LH / LHU / LWL / LWR & LDB
-    .LB             (LB             ),
-    .LBU            (LBU            ),
-    .LH             (LH             ),
-    .LHU            (LHU            ),
-    .LWL            (LWL            ),
-    .LWR            (LWR            ),
+    .dm_word        (dm_word        ),
+    // ld_word LB / LBU / LH / LHU / LWL / LWR & LDB
+    .ld_word        (ld_word        ),
     .LDB            (LDB            ),
     ._LB            (_LB            ),
     ._LBU           (_LBU           ),
