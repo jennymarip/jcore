@@ -70,10 +70,10 @@ assign nextpc       = WS_EX              ? 32'hbfc00380 :
                       ERET               ? cp0_epc      :
                       br_taken           ? br_target    : 
                                            seq_pc; 
-assign pre_fs_ready_go  = ~br_stall;
+assign pre_fs_ready_go  = ~br_stall && inst_sram_addr_ok;
 
 // IF stage
-assign fs_ready_go    = 1'b1                                  ;
+assign fs_ready_go    = inst_sram_data_ok                     ;
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go              ;
 
@@ -99,6 +99,8 @@ end
 
 // inst sram interface
 assign inst_sram_en    = to_fs_valid && fs_allowin && ~br_stall || WS_EX;
+assign inst_sram_wr    = 1'b0                                           ;
+assign inst_sram_size  = 2'b10                                          ;
 assign inst_sram_wen   = 4'h0                                           ;
 assign inst_sram_addr  = {nextpc[31:2], 2'b0}                           ;
 assign inst_sram_wdata = 32'b0                                          ;
