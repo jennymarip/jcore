@@ -1,15 +1,15 @@
 `include "mycpu.h"
 
 module if_stage(
-    input                          clk            ,
-    input                          reset          ,
+    input                          clk              ,
+    input                          reset            ,
     // allwoin
-    input                          ds_allowin     ,
+    input                          ds_allowin       ,
     // brbus
-    input  [`BR_BUS_WD       -1:0] br_bus         ,
+    input  [`BR_BUS_WD       -1:0] br_bus           ,
     // to ds
-    output                         fs_to_ds_valid ,
-    output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus   ,
+    output                         fs_to_ds_valid   ,
+    output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus     ,
     // inst sram interface
     output                         inst_sram_en     ,
     output                         inst_sram_wr     ,
@@ -21,12 +21,9 @@ module if_stage(
     input                          inst_sram_data_ok,
     input  [31:0]                  inst_sram_rdata  ,
     // EX (ex_word[DS, ES, MS, WS])
-    input                          ERET           ,
-    input  [31:0]                  cp0_epc        ,
-    input  [ 3:0]                  ex_word        ,
-    // branch slot
-    input                          is_branch      ,
-    output                         BD
+    input                          ERET             ,
+    input  [31:0]                  cp0_epc          ,
+    input  [ 3:0]                  ex_word
 );
 
 reg         fs_valid   ;
@@ -104,8 +101,5 @@ assign inst_sram_size  = 2'b10                                          ;
 assign inst_sram_wen   = 4'h0                                           ;
 assign inst_sram_addr  = {nextpc[31:2], 2'b0}                           ;
 assign inst_sram_wdata = 32'b0                                          ;
-
-// slot
-assign BD = is_branch;
 
 endmodule

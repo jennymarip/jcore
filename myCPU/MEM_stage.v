@@ -81,7 +81,7 @@ wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
 wire [31:0] ms_pc   ;
-wire        bd      ;
+wire        slot    ;
 wire        eret    ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
@@ -90,7 +90,7 @@ assign {pc_error       ,  //110:110
         BadVAddr       ,  //109:78
         ex_code        ,  //77:73
         eret           ,  //72:72
-        bd             ,  //71:71
+        slot           ,  //71:71
         ms_res_from_mem,  //70:70
         ms_gr_we       ,  //69:69
         ms_dest        ,  //68:64
@@ -117,7 +117,7 @@ assign ms_to_ws_bus = {pc_error       ,  //109:109
                        BadVAddr       ,  //108:77
                        ex_code        ,  //76:72
                        eret           ,  //71:71
-                       bd             ,  //70:70
+                       slot           ,  //70:70
                        ms_gr_we       ,  //69:69
                        ms_dest        ,  //68:64
                        ms_final_result,  //63:32

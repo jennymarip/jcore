@@ -10,7 +10,7 @@ module CP0(
     input  [31:0] wdata ,
     // control
     input  [ 4:0] ex_code   ,
-    input         bd        ,
+    input         slot      ,
     input         eret      ,
     input  [31:0] BadVAddr  ,
     input         pc_error  ,
@@ -22,17 +22,17 @@ module CP0(
     output [31:0] cause     ,
     output [31:0] status
 );
-wire ex;
+wire   ex                          ;
 assign ex     = (ex_code != `NO_EX);
-assign cause  = cp0_cause;
-assign status = cp0_status;
+assign cause  = cp0_cause          ;
+assign status = cp0_status         ;
 
 // EPC
 reg [31:0] cp0_epc;
 always @(posedge clk) begin
     if (ex && !cp0_status_exl) begin
-        cp0_epc <= (bd & ~pc_error) ? wdata - 3'h4 : 
-                                      wdata;
+        cp0_epc <= (slot & ~pc_error) ? wdata - 3'h4 : 
+                                        wdata;
     end
     if (mtc0 & (mtc0_waddr == `CP0_EPC)) begin
         cp0_epc <= mtc0_wdata;
@@ -46,7 +46,7 @@ always @(posedge clk) begin
         cp0_cause_bd <= 1'b0;
     end
     else if (ex && !cp0_status_exl) begin
-        cp0_cause_bd <= bd;
+        cp0_cause_bd <= slot;
     end
 end
 reg    cp0_cause_ti;

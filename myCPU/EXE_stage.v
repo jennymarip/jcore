@@ -142,11 +142,11 @@ wire [31:0] es_rt_value        ;
 wire [31:0] es_pc              ;
 wire [ 4:0] ex_code            ;
 wire [ 4:0] rd                 ;
-wire        bd                 ;
+wire        slot               ;
 wire        eret               ;
 wire        pc_error           ;
 assign {eret               ,  //145:145
-        bd                 ,  //144:144
+        slot               ,  //144:144
         rd                 ,  //143:139
         es_alu_op          ,  //138:125
         es_load_op         ,  //124:124
@@ -177,7 +177,7 @@ assign es_to_ms_bus = {pc_error         ,  //110:110
                        BadVAddr         ,  //109:78
                        ex_code          ,  //77:73
                        eret             ,  //72:72
-                       bd               ,  //71:71
+                       slot             ,  //71:71
                        es_res_from_mem  ,  //70:70
                        es_gr_we         ,  //69:69
                        es_dest          ,  //68:64

@@ -44,7 +44,7 @@ wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
 wire [31:0] ws_pc   ;
-wire        bd      ;
+wire        slot    ;
 wire        eret    ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
@@ -53,7 +53,7 @@ assign {pc_error       ,  //109:109
         BadVAddr       ,  //108:77
         ex_code        ,  //76:72
         eret           ,  //71:71
-        bd             ,  //70:70
+        slot           ,  //70:70
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
@@ -130,7 +130,7 @@ CP0 CP0(
     .wdata      (cp0_wdata  ),
     // control
     .ex_code    (ex_code    ),
-    .bd         (bd         ),
+    .slot       (slot       ),
     .eret       (eret       ),
     .BadVAddr   (BadVAddr   ),
     .pc_error   (pc_error   ),

@@ -14,7 +14,6 @@ module id_stage(
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus  ,
     //to fs
     output [`BR_BUS_WD       -1:0] br_bus        ,
-    output                         is_branch     ,
     //to rf: for write back
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus  ,
     //from es,ms,ws data dependence
@@ -53,9 +52,7 @@ module id_stage(
     output [ 4:0]                  mtc0_waddr   ,
     // interrupt
     input  [31:0]                  cause        ,
-    input  [31:0]                  status       ,
-    // slot
-    input                          _BD
+    input  [31:0]                  status
 );
 
 reg         ds_valid   ;
@@ -212,7 +209,7 @@ assign ds_to_es_bus = {pc_error        ,  //183:183
                        BadVAddr        ,  //182:151
                        ex_code         ,  //150:146
                        eret            ,  //145:145
-                       BD              ,  //144:144
+                       slot            ,  //144:144
                        rd              ,  //143:139
                        alu_op          ,  //138:125
                        load_op         ,  //124:124
@@ -426,16 +423,16 @@ assign rt_value = rt_wait ? (rt == EXE_dest ?  EXE_dest_data :
                              rt == MEM_dest ?  MEM_dest_data : WB_dest_data)
                             : rf_rdata2;
 
-// BU
-reg    BD;
+// BU (这里逻辑默认是分支指令的下一条一定是延迟槽，这是错误的，未来会修改)
+reg    slot;
 assign is_branch = (inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz | inst_bltzal | inst_bgezal | inst_jal | inst_jalr | inst_j | inst_jr) & ds_valid;
 
 always @(posedge clk) begin
     if (reset) begin
-        BD <= 1'b0;
+        slot <=   1'b0   ;
     end
     else begin
-        BD <= _BD;
+        slot <= is_branch;
     end
 end
 assign rs_eq_rt   = (rs_value == rt_value);

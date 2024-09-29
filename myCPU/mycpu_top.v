@@ -40,10 +40,10 @@ wire [31:0]  EXE_dest_data;
 wire [31:0]  MEM_dest_data;
 wire [31:0]  WB_dest_data ;
 
-wire         ds_allowin;
-wire         es_allowin;
-wire         ms_allowin;
-wire         ws_allowin;
+wire         ds_allowin    ;
+wire         es_allowin    ;
+wire         ms_allowin    ;
+wire         ws_allowin    ;
 wire         fs_to_ds_valid;
 wire         ds_to_es_valid;
 wire         es_to_ms_valid;
@@ -58,10 +58,8 @@ wire          WS_EX  ;
 wire [31:0]   cp0_epc;
 wire          ERET   ;
 
-wire DS_EX    ;
-wire ES_EX    ;
-wire is_branch;
-wire BD       ;
+wire DS_EX;
+wire ES_EX;
 // EX word
 wire [3:0] ex_word;
 assign     ex_word = {DS_EX, ES_EX, MS_EX, WS_EX};
@@ -89,10 +87,7 @@ if_stage if_stage(
     // EX
     .ERET             (ERET             ),
     .cp0_epc          (cp0_epc          ),
-    .ex_word          (ex_word          ),
-    // branch slot
-    .is_branch        (is_branch        ),
-    .BD               (BD               )
+    .ex_word          (ex_word          )
 );
 wire [ 3:0]               dm_word   ;
 wire [ `LD_WORD_LEN -1:0] ld_word   ;
@@ -124,7 +119,6 @@ id_stage id_stage(
     .ds_to_es_bus   (ds_to_es_bus   ),
     //to fs
     .br_bus         (br_bus         ),
-    .is_branch      (is_branch      ),
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
     //from es,ms,ws
@@ -163,9 +157,7 @@ id_stage id_stage(
     .mtc0_waddr    (mtc0_waddr    ),
     // interrupt
     .cause         (cause         ),
-    .status        (status        ),
-    // slot
-    ._BD            (BD            )
+    .status        (status        )
 );
 wire [ 1:0] LDB           ;
 wire        _LB           ;
