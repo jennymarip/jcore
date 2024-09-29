@@ -423,7 +423,7 @@ assign rt_value = rt_wait ? (rt == EXE_dest ?  EXE_dest_data :
                              rt == MEM_dest ?  MEM_dest_data : WB_dest_data)
                             : rf_rdata2;
 
-// BU (这里逻辑默认是分支指令的下一条一定是延迟槽，这是错误的，未来会修改)
+// BU (这里逻辑默认是分支指令的下一个节拍出现的一定是延迟槽指令，这是错误的，未来会修改)
 reg    slot;
 assign is_branch = (inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz | inst_bltzal | inst_bgezal | inst_jal | inst_jalr | inst_j | inst_jr) & ds_valid;
 
