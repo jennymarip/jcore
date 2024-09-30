@@ -87,7 +87,7 @@ assign {rf_we   ,  //37:37
         rf_wdata   //31:0
        } = ws_to_rf_bus;
 
-wire        br_taken;
+wire        br_taken ;
 wire [31:0] br_target;
 
 
@@ -203,7 +203,7 @@ wire        rs_lt_zero;
 wire [ 4:0] ex_code;
 wire        eret   ;
 
-assign br_bus       = {br_stall,br_taken,br_target};
+assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
 assign ds_to_es_bus = {pc_error        ,  //183:183
                        BadVAddr        ,  //182:151
@@ -440,6 +440,7 @@ assign rs_ge_zero = ($signed(rs_value) >= 0);
 assign rs_gt_zero = ($signed(rs_value)  > 0);
 assign rs_le_zero = ($signed(rs_value) <= 0);
 assign rs_lt_zero = ($signed(rs_value)  < 0);
+
 assign br_taken   = (  inst_beq    &  rs_eq_rt
                      | inst_bne    & !rs_eq_rt
                      | inst_bgez   &  rs_ge_zero

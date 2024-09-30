@@ -3,7 +3,7 @@
 module if_stage(
     input                          clk              ,
     input                          reset            ,
-    // allwoin
+    // allowin
     input                          ds_allowin       ,
     // brbus
     input  [`BR_BUS_WD       -1:0] br_bus           ,
@@ -36,10 +36,17 @@ wire [31:0] nextpc;
 
 wire         pre_fs_ready_go;
 
-wire         br_stall                         ;
-wire         br_taken                         ;
-wire [ 31:0] br_target                        ;
-assign {br_stall, br_taken,br_target} = br_bus;
+// BU (pre decode => get is_branch when the instruction is in IF stage)
+wire         is_branch                            ;
+pre_decode pre_decode(
+    .fs_inst   (fs_inst && 32{inst_sram_data_ok}),
+    .is_branch (is_branch                       ) 
+);
+wire         br                                   ;
+wire         br_stall                             ;
+wire         br_taken                             ;
+wire [ 31:0] br_target                            ;
+assign {br, br_stall, br_taken,br_target} = br_bus;
 
 // EX test
 wire        WS_EX   ;
@@ -61,12 +68,13 @@ assign fs_to_ds_bus = {pc_error,
                        fs_pc   };
 
 // pre-IF stage
-assign to_fs_valid  = ~reset && pre_fs_ready_go;
-assign seq_pc       = fs_pc + 3'h4;
-assign nextpc       = WS_EX              ? 32'hbfc00380 : 
-                      ERET               ? cp0_epc      :
-                      br_taken           ? br_target    : 
-                                           seq_pc; 
+assign to_fs_valid  = ~reset && pre_fs_ready_go    ;
+assign seq_pc       = fs_pc + 3'h4                 ;
+assign nextpc       = WS_EX ? 32'hbfc00380 : 
+                      ERET  ? cp0_epc      :
+                      br    ? (!fs_valid ? seq_pc    :
+                                br_taken ? br_target :
+                                            seq_pc);
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_req && inst_sram_addr_ok);
 
 // IF stage
@@ -95,6 +103,7 @@ always @(posedge clk) begin
 end
 
 // inst sram interface
+// 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 wire   inst_sram_req;
 assign inst_sram_req   = fs_allowin && ~br_stall || WS_EX;
 
