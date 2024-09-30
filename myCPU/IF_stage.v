@@ -39,8 +39,8 @@ wire         pre_fs_ready_go;
 // BU (pre decode => get is_branch when the instruction is in IF stage)
 wire         is_branch                            ;
 pre_decode pre_decode(
-    .fs_inst   (fs_inst && 32{inst_sram_data_ok}),
-    .is_branch (is_branch                       ) 
+    .fs_inst   (fs_inst && {32{inst_sram_data_ok}}),
+    .is_branch (is_branch                         ) 
 );
 wire         br                                   ;
 wire         br_stall                             ;
@@ -74,7 +74,7 @@ assign nextpc       = WS_EX ? 32'hbfc00380 :
                       ERET  ? cp0_epc      :
                       br    ? (!fs_valid ? seq_pc    :
                                 br_taken ? br_target :
-                                            seq_pc);
+                                            seq_pc):seq_pc;
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_req && inst_sram_addr_ok);
 
 // IF stage
