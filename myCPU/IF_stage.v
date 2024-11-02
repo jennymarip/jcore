@@ -104,10 +104,24 @@ end
 
 // inst sram interface
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
+// 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
 wire   inst_sram_req;
 assign inst_sram_req   = fs_allowin && ~br_stall || WS_EX;
 
-assign inst_sram_en    = inst_sram_req       ;
+reg    inst_sram_en_reg;
+always@(posedge clk) begin
+    if (reset) begin
+        inst_sram_en_reg <= inst_sram_req;
+    end
+    else if (inst_sram_addr_ok) begin
+        inst_sram_en_reg <= 1'b0         ;
+    end
+    else if (inst_sram_data_ok) begin
+        inst_sram_en_reg <= inst_sram_req;
+    end
+end
+
+assign inst_sram_en    = inst_sram_en_reg    ;
 assign inst_sram_wr    = 1'b0                ;
 assign inst_sram_size  = 2'b10               ;
 assign inst_sram_wen   = 4'h0                ;
