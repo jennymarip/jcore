@@ -75,7 +75,7 @@ assign nextpc       = WS_EX ? 32'hbfc00380 :
                       br    ? (!fs_valid ? seq_pc    :
                                 br_taken ? br_target :
                                             seq_pc):seq_pc;
-assign pre_fs_ready_go  = ~br_stall && (inst_sram_req && inst_sram_addr_ok);
+assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 
 // IF stage
 assign fs_ready_go    = inst_sram_data_ok                     ;
@@ -113,7 +113,7 @@ always@(posedge clk) begin
     if (reset) begin
         inst_sram_en_reg <= inst_sram_req;
     end
-    else if (inst_sram_addr_ok) begin
+    else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
         inst_sram_en_reg <= 1'b0         ;
     end
     else if (inst_sram_data_ok) begin
