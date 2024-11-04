@@ -37,11 +37,36 @@ wire [31:0] nextpc;
 wire         pre_fs_ready_go;
 
 // BU (pre decode => get is_branch when the instruction is in IF stage)
-wire         is_branch                            ;
+// is_branch_reg indicates the "last" instruction in the if-stage is branch-type
+// is_slot_reg indicates the instruction in the if-stage is branch-type
+// so is_slot_reg is got via is_branch_reg
+wire         is_branch    ;
+reg          is_branch_reg;
+reg          is_slot_reg  ;
 pre_decode pre_decode(
-    .fs_inst   (fs_inst && {32{inst_sram_data_ok}}),
-    .is_branch (is_branch                         ) 
+    .fs_inst   (fs_inst & {32{inst_sram_data_ok}}),
+    .is_branch (is_branch                        ) 
 );
+always @(posedge clk) begin
+    // set is_branch_reg
+    if (reset) begin
+        is_branch_reg <= 1'b0;
+    end
+    else if (is_branch) begin
+        is_branch_reg <= 1'b1;
+    end
+    else if (fs_allowin && to_fs_valid) begin
+        is_branch_reg <= 1'b0;
+    end
+    // set is_slot_reg
+    if (reset) begin
+        is_slot_reg <= 1'b0;
+    end
+    else if(is_branch_reg && fs_allowin && to_fs_valid) begin
+        is_slot_reg <= 1'b1;
+    end
+
+end
 wire         br                                   ;
 wire         br_stall                             ;
 wire         br_taken                             ;
@@ -70,11 +95,10 @@ assign fs_to_ds_bus = {pc_error,
 // pre-IF stage
 assign to_fs_valid  = ~reset && pre_fs_ready_go    ;
 assign seq_pc       = fs_pc + 3'h4                 ;
-assign nextpc       = WS_EX ? 32'hbfc00380 : 
-                      ERET  ? cp0_epc      :
-                      br    ? (!fs_valid ? seq_pc    :
-                                br_taken ? br_target :
-                                            seq_pc):seq_pc;
+assign nextpc       = WS_EX       ? 32'hbfc00380 : 
+                      ERET        ? cp0_epc      :
+                      is_slot_reg ? (br_taken ? br_target : seq_pc) : seq_pc;
+
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 
 // IF stage
