@@ -38,7 +38,7 @@ wire         pre_fs_ready_go;
 
 // BU (pre decode => get is_branch when the instruction is in IF stage)
 // is_branch_reg indicates the "last" instruction in the if-stage is branch-type
-// is_slot_reg indicates the instruction in the if-stage is branch-type
+// is_slot_reg indicates the "last" instruction in the if-stage is a slot
 // so is_slot_reg is got via is_branch_reg
 wire         is_branch    ;
 reg          is_branch_reg;
@@ -65,14 +65,28 @@ always @(posedge clk) begin
     else if(is_branch_reg && fs_allowin && to_fs_valid) begin
         is_slot_reg <= 1'b1;
     end
-
+    else if (fs_allowin && to_fs_valid) begin
+        is_slot_reg <= 1'b0;
+    end
 end
 wire         br                                   ;
 wire         br_stall                             ;
 wire         br_taken                             ;
-wire [ 31:0] br_target                            ;
+wire [31:0]  br_target                            ;
 assign {br, br_stall, br_taken,br_target} = br_bus;
-
+// save the branch info
+reg          br_taken_reg ;
+reg  [31:0]  br_target_reg;
+always @(posedge clk) begin
+    if (reset) begin
+        br_taken_reg  <=  1'b0    ;
+        br_target_reg <= 32'b0    ;
+    end
+    else if (br_taken) begin
+        br_taken_reg  <= br_taken ;
+        br_target_reg <= br_target;
+    end
+end
 // EX test
 wire        WS_EX   ;
 wire [31:0] fs_inst ;
@@ -95,9 +109,10 @@ assign fs_to_ds_bus = {pc_error,
 // pre-IF stage
 assign to_fs_valid  = ~reset && pre_fs_ready_go    ;
 assign seq_pc       = fs_pc + 3'h4                 ;
-assign nextpc       = WS_EX       ? 32'hbfc00380 : 
-                      ERET        ? cp0_epc      :
-                      is_slot_reg ? (br_taken ? br_target : seq_pc) : seq_pc;
+assign nextpc       = WS_EX       ? 32'hbfc00380                                                              : 
+                      ERET        ? cp0_epc                                                                   :
+                      is_slot_reg ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
+                                    seq_pc;
 
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 
