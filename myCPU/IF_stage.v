@@ -86,6 +86,9 @@ always @(posedge clk) begin
         br_taken_reg  <= br_taken ;
         br_target_reg <= br_target;
     end
+    else if (is_slot_reg && fs_allowin && to_fs_valid) begin
+        br_taken_reg  <=  1'b0    ;
+    end
 end
 // EX test
 wire        WS_EX   ;
