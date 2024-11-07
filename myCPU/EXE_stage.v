@@ -16,10 +16,11 @@ module exe_stage(
     output        data_sram_en     ,
     output        data_sram_wr     ,
     output [ 1:0] data_sram_size   ,
-    output [ 3:0] data_sram_wen    ,
+    output [ 3:0] data_sram_wstrb  ,
     output [31:0] data_sram_addr   ,
     output [31:0] data_sram_wdata  ,
     input         data_sram_addr_ok,
+    input         data_sram_data_ok,
     // to ds data dependence
     output [ 4:0] EXE_dest      ,
     output        es_load_op    ,
@@ -188,7 +189,7 @@ assign EXE_dest = es_dest & {5{es_valid}};
 
 reg [ 2:0] OF_TEST;
 
-assign es_ready_go    = ~div_unfinished | MS_EX | WS_EX;
+assign es_ready_go    = data_sram_en ? data_sram_addr_ok : (~div_unfinished | MS_EX | WS_EX);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -435,9 +436,26 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  (swr & (LDB == 2'b10))?{es_rt_value[15:0], 16'b0} :
                  (swr & (LDB == 2'b11))?{es_rt_value[7:0], 24'b0} :
                  es_rt_value[31:0];
+// data sram interface
+wire   data_sram_req;
+assign data_sram_req = es_load_op | es_mem_we;
 
-assign data_sram_en    = 1'b1;
-assign data_sram_wen   = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
+reg    data_sram_en_reg;
+always @(posedge clk) begin
+    if (reset) begin
+        data_sram_en_reg <= 1'b0;
+    end
+    else if (data_sram_req) begin
+        data_sram_en_reg <= data_sram_req;
+    end
+    else if (data_sram_addr_ok & ~ data_sram_data_ok) begin
+        data_sram_en_reg <= 1'b0;
+    end
+end
+assign data_sram_en    = data_sram_en_reg;
+assign data_sram_wr    = es_mem_we ? 1'b1 : 1'b0;
+assign data_sram_size  = 2'b10; // to change
+assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                          (
                             (WS_EX || MS_EX      )? 4'b0000 :
                             (sb  & (LDB == 2'b00))? 4'b0001 :

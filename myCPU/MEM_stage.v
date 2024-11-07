@@ -124,7 +124,7 @@ assign ms_to_ws_bus = {pc_error       ,  //109:109
                        ms_pc             //31:0
                       };
 
-assign ms_ready_go    = 1'b1;
+assign ms_ready_go    = data_sram_data_ok;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin
@@ -168,6 +168,6 @@ assign mem_result = lb ?  LB_result
 assign ms_final_result = ms_res_from_mem ? mem_result :
                                            ms_alu_result;
 // forward
-assign MEM_dest_data   = ms_final_result & {32{ms_valid}};
+assign MEM_dest_data   = ms_final_result & {32{ms_to_ws_valid}};
 
 endmodule

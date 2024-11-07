@@ -190,10 +190,11 @@ exe_stage exe_stage(
     .data_sram_en     (data_sram_req    ),
     .data_sram_wr     (data_sram_wr     ),
     .data_sram_size   (data_sram_size   ),
-    .data_sram_wen    (data_sram_wstrb  ),
+    .data_sram_wstrb  (data_sram_wstrb  ),
     .data_sram_addr   (data_sram_addr   ),
     .data_sram_wdata  (data_sram_wdata  ),
     .data_sram_addr_ok(data_sram_addr_ok),
+    .data_sram_data_ok(data_sram_data_ok),
     //data dependence
     .EXE_dest       (EXE_dest       ),
     .es_load_op     (es_load_op     ),
