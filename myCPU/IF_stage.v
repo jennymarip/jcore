@@ -73,7 +73,8 @@ wire         br                                   ;
 wire         br_stall                             ;
 wire         br_taken                             ;
 wire [31:0]  br_target                            ;
-assign {br, br_stall, br_taken,br_target} = br_bus;
+assign {br, br_stall, br_taken} = br_bus[34:32]   ;
+assign       br_target = br_taken_reg ? br_target_reg : br_bus[31:0];
 // save the branch info
 reg          br_taken_reg ;
 reg  [31:0]  br_target_reg;
@@ -82,7 +83,7 @@ always @(posedge clk) begin
         br_taken_reg  <=  1'b0    ;
         br_target_reg <= 32'b0    ;
     end
-    else if (br_taken) begin
+    else if (br_taken & ~br_taken_reg) begin
         br_taken_reg  <= br_taken ;
         br_target_reg <= br_target;
     end

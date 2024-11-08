@@ -86,7 +86,9 @@ wire        eret    ;
 wire [ 4:0] ex_code ;
 wire [31:0] BadVAddr;
 wire        pc_error;
-assign {pc_error       ,  //110:110
+wire        mem_access;
+assign {mem_access     ,  //111:111
+        pc_error       ,  //110:110
         BadVAddr       ,  //109:78
         ex_code        ,  //77:73
         eret           ,  //72:72
@@ -124,7 +126,7 @@ assign ms_to_ws_bus = {pc_error       ,  //109:109
                        ms_pc             //31:0
                       };
 
-assign ms_ready_go    = data_sram_data_ok;
+assign ms_ready_go    = mem_access ? data_sram_data_ok : 1'b1;
 assign ms_allowin     = !ms_valid || ms_ready_go && ws_allowin;
 assign ms_to_ws_valid = ms_valid && ms_ready_go;
 always @(posedge clk) begin

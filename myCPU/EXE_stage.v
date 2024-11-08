@@ -146,6 +146,7 @@ wire [ 4:0] rd                 ;
 wire        slot               ;
 wire        eret               ;
 wire        pc_error           ;
+wire        mem_access         ;
 assign {eret               ,  //145:145
         slot               ,  //144:144
         rd                 ,  //143:139
@@ -174,7 +175,8 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {pc_error         ,  //110:110
+assign es_to_ms_bus = {mem_access       ,  //111:111
+                       pc_error         ,  //110:110
                        BadVAddr         ,  //109:78
                        ex_code          ,  //77:73
                        eret             ,  //72:72
@@ -439,7 +441,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
 // data sram interface
 wire   data_sram_req;
 assign data_sram_req = es_load_op | es_mem_we;
-
+assign mem_access    = data_sram_req         ;
 reg    data_sram_en_reg;
 always @(posedge clk) begin
     if (reset) begin
