@@ -19,6 +19,7 @@ module mem_stage(
     output [ 4:0]                  MEM_dest      ,
     //forward
     output [31:0]                  MEM_dest_data ,
+    output                         ms_load_op    ,
     // LDB & LB / LBU / LH / LHU / LWL
     input  [ 1:0]                  LDB           ,
     input                          _LB           ,
@@ -171,5 +172,5 @@ assign ms_final_result = ms_res_from_mem ? mem_result :
                                            ms_alu_result;
 // forward
 assign MEM_dest_data   = ms_final_result & {32{ms_to_ws_valid}};
-
+assign ms_load_op      = ms_res_from_mem;
 endmodule

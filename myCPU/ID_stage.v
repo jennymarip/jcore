@@ -17,10 +17,12 @@ module id_stage(
     //to rf: for write back
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus  ,
     //from es,ms,ws data dependence
-    input  [ 4:0]                  EXE_dest     ,
-    input  [ 4:0]                  MEM_dest     ,
-    input  [ 4:0]                  WB_dest      ,
-    input                          es_load_op   ,
+    input  [ 4:0]                  EXE_dest         ,
+    input  [ 4:0]                  MEM_dest         ,
+    input  [ 4:0]                  WB_dest          ,
+    input                          es_load_op       ,
+    input                          ms_load_op       ,
+    input                          data_sram_data_ok,
     // forward
     input  [31:0]                  EXE_dest_data,
     input  [31:0]                  MEM_dest_data,
@@ -63,8 +65,10 @@ assign DS_EX = (ex_code != `NO_EX) & ds_valid;
 wire   br_stall;
 wire   load_stall;
 assign br_stall   = br_taken & load_stall & {5{ds_valid}};
-assign load_stall = (rs_wait & (rs == EXE_dest) & es_load_op ) |
-                    (rt_wait & (rt == EXE_dest) & es_load_op ); 
+// assign load_stall = (rs_wait & (rs == EXE_dest) & es_load_op ) |
+//                     (rt_wait & (rt == EXE_dest) & es_load_op ); 
+assign load_stall = ((rs_wait & (rs == EXE_dest) & es_load_op ) | (rs_wait & (rs == MEM_dest) & ms_load_op & ~data_sram_data_ok)) |
+                    ((rt_wait & (rt == EXE_dest) & es_load_op ) | (rt_wait & (rt == MEM_dest) & ms_load_op & ~data_sram_data_ok));
 
 wire [31                 :0] fs_pc;
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
@@ -245,7 +249,7 @@ assign inst_no_dest = inst_beq | inst_bgez | inst_bne | inst_bgtz | inst_blez | 
                       inst_mthi | inst_mtlo |
                       inst_syscall | inst_break | inst_mtc0;
 
-assign ds_ready_go    = ds_valid & ~load_stall; // to change
+assign ds_ready_go    = ds_valid & ~load_stall;
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
 always @(posedge clk) begin

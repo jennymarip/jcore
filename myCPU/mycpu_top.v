@@ -34,6 +34,7 @@ wire [ 4:0]  EXE_dest  ;
 wire [ 4:0]  MEM_dest  ;
 wire [ 4:0]  WB_dest   ;
 wire         es_load_op;
+wire         ms_load_op;
 
 //forward
 wire [31:0]  EXE_dest_data;
@@ -122,10 +123,12 @@ id_stage id_stage(
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
     //from es,ms,ws
-    .EXE_dest      (EXE_dest      ),
-    .MEM_dest      (MEM_dest      ),
-    .WB_dest       (WB_dest       ),
-    .es_load_op    (es_load_op    ),
+    .EXE_dest          (EXE_dest         ),
+    .MEM_dest          (MEM_dest         ),
+    .WB_dest           (WB_dest          ),
+    .es_load_op        (es_load_op       ),
+    .ms_load_op        (ms_load_op       ),
+    .data_sram_data_ok (data_sram_data_ok),
     //forward
     .EXE_dest_data (EXE_dest_data ),
     .MEM_dest_data (MEM_dest_data ),
@@ -255,6 +258,7 @@ mem_stage mem_stage(
     .MEM_dest       (MEM_dest       ),
     //forward
     .MEM_dest_data  (MEM_dest_data  ),
+    .ms_load_op     (ms_load_op     ),
     // LDB & LB / LBU / LH / LHU / LWL / LWR
     .LDB            (LDB            ),
     ._LB            (_LB            ),
