@@ -121,7 +121,7 @@ assign nextpc       = WS_EX       ? 32'hbfc00380                                
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 
 // IF stage
-assign fs_ready_go    = inst_sram_data_ok                     ;
+assign fs_ready_go    = inst_ready_reg | inst_sram_data_ok    ;
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go              ;
 
@@ -151,7 +151,9 @@ end
 wire   inst_sram_req;
 assign inst_sram_req   = fs_allowin && ~br_stall || WS_EX;
 
+// inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
 reg    inst_sram_en_reg;
+reg    inst_ready_reg  ;
 always@(posedge clk) begin
     if (reset) begin
         inst_sram_en_reg <= inst_sram_req;
@@ -159,8 +161,19 @@ always@(posedge clk) begin
     else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
         inst_sram_en_reg <= 1'b0         ;
     end
-    else if (inst_sram_data_ok) begin
+    else if (fs_allowin) begin
         inst_sram_en_reg <= inst_sram_req;
+    end
+end
+always @(posedge clk) begin
+    if (reset) begin
+        inst_ready_reg <= 1'b0;
+    end
+    else if (inst_sram_data_ok) begin
+        inst_ready_reg <= 1'b1;
+    end
+    else if (inst_sram_addr_ok) begin
+        inst_ready_reg <= 1'b0;
     end
 end
 
