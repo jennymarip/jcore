@@ -191,7 +191,8 @@ assign EXE_dest = es_dest & {5{es_valid}};
 
 reg [ 2:0] OF_TEST;
 
-assign es_ready_go    = data_sram_en ? data_sram_addr_ok : (~div_unfinished | MS_EX | WS_EX);
+assign es_ready_go    = (data_sram_req || data_sram_en) ? data_sram_addr_ok : 
+                                                          (~div_unfinished | MS_EX | WS_EX);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
