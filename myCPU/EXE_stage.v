@@ -191,8 +191,11 @@ assign EXE_dest = es_dest & {5{es_valid}};
 
 reg [ 2:0] OF_TEST;
 
-assign es_ready_go    = (data_sram_req || data_sram_en) ? data_sram_addr_ok : 
-                                                          (~div_unfinished | MS_EX | WS_EX);
+// assign es_ready_go    = (data_sram_req || data_sram_en) ? data_sram_addr_ok : 
+//                                                           (~div_unfinished | MS_EX | WS_EX);
+assign es_ready_go    = (data_sram_req && ~ data_sram_en) ? 1'b0 :
+                                                           (data_sram_en ? data_sram_addr_ok : 
+                                                                           (~div_unfinished | MS_EX | WS_EX));
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -441,7 +444,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  es_rt_value[31:0];
 // data sram interface
 wire   data_sram_req;
-assign data_sram_req = es_load_op | es_mem_we;
+assign data_sram_req = (es_load_op || es_mem_we) && es_valid;
 assign mem_access    = data_sram_req         ;
 reg    data_sram_en_reg;
 always @(posedge clk) begin
