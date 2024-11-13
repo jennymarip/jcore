@@ -65,8 +65,6 @@ assign DS_EX = (ex_code != `NO_EX) & ds_valid;
 wire   br_stall;
 wire   load_stall;
 assign br_stall   = br_taken & load_stall & {5{ds_valid}};
-// assign load_stall = (rs_wait & (rs == EXE_dest) & es_load_op ) |
-//                     (rt_wait & (rt == EXE_dest) & es_load_op ); 
 assign load_stall = ((rs_wait & (rs == EXE_dest) & es_load_op ) | (rs_wait & (rs == MEM_dest) & ms_load_op & ~data_sram_data_ok)) |
                     ((rt_wait & (rt == EXE_dest) & es_load_op ) | (rt_wait & (rt == MEM_dest) & ms_load_op & ~data_sram_data_ok));
 
@@ -80,8 +78,8 @@ wire [31:0] BadVAddr;
 wire        pc_error;
 assign {ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
-assign BadVAddr = fs_to_ds_bus_r[100:69];
-assign pc_error = fs_to_ds_bus_r[101];
+assign {pc_error,
+        BadVAddr} = fs_to_ds_bus_r[101:69];
 
 wire        rf_we   ;
 wire [ 4:0] rf_waddr;

@@ -172,7 +172,7 @@ always @(posedge clk) begin
     else if (inst_sram_data_ok) begin
         inst_ready_reg <= 1'b1;
     end
-    else if (inst_sram_addr_ok) begin
+    else if (inst_sram_addr_ok && inst_sram_en) begin
         inst_ready_reg <= 1'b0;
     end
 end
