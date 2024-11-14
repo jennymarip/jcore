@@ -456,9 +456,9 @@ always @(posedge clk) begin
         data_sram_en_reg <= 1'b0;
     end
 end
-assign data_sram_en    = data_sram_en_reg;
-assign data_sram_wr    = es_mem_we ? 1'b1 : 1'b0;
-assign data_sram_size  = 2'b10; // to change
+assign data_sram_en    = data_sram_en_reg && es_valid; // 只有es阶段有效，数据请求才可以发出
+assign data_sram_wr    = es_mem_we ? 1'b1 : 1'b0     ;
+assign data_sram_size  = 2'b10                       ; // to change
 assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                          (
                             (WS_EX || MS_EX      )? 4'b0000 :
