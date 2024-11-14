@@ -68,7 +68,7 @@ assign br_stall   = br_taken & load_stall & {5{ds_valid}};
 assign load_stall = ((rs_wait & (rs == EXE_dest) & es_load_op ) | (rs_wait & (rs == MEM_dest) & ms_load_op & ~data_sram_data_ok)) |
                     ((rt_wait & (rt == EXE_dest) & es_load_op ) | (rt_wait & (rt == MEM_dest) & ms_load_op & ~data_sram_data_ok));
 
-wire [31                 :0] fs_pc;
+wire [31                 :0] fs_pc         ;
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 

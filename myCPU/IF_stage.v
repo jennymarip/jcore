@@ -37,12 +37,14 @@ wire [31:0] nextpc;
 wire         pre_fs_ready_go;
 
 // BU (pre decode => get is_branch when the instruction is in IF stage)
-// is_branch_reg indicates the "last" instruction in the if-stage is branch-type
-// is_slot_reg indicates the "last" instruction in the if-stage is a slot
-// so is_slot_reg is got via is_branch_reg
+// branch_in_fs indicates the instruction in the if-stage is branch-type
+// is_slot_reg indicates the instruction in the if-stage is a slot
+// is_slot_reg is got via is_branch_reg
 wire         is_branch    ;
 reg          is_branch_reg;
 reg          is_slot_reg  ;
+wire         branch_in_fs ;
+assign       branch_in_fs = is_branch || is_branch_reg;
 pre_decode pre_decode(
     .fs_inst   (fs_inst & {32{inst_sram_data_ok}}),
     .is_branch (is_branch                        ) 
@@ -121,7 +123,9 @@ assign nextpc       = WS_EX       ? 32'hbfc00380                                
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 
 // IF stage
-assign fs_ready_go    = inst_ready_reg | inst_sram_data_ok    ;
+// 保证跳转指令与延迟槽在相邻流水级
+assign fs_ready_go    = branch_in_fs ? to_fs_valid :
+                                      (inst_ready_reg | inst_sram_data_ok);
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go              ;
 
@@ -149,7 +153,8 @@ end
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 // 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
 wire   inst_sram_req;
-assign inst_sram_req   = fs_allowin && ~br_stall || WS_EX;
+assign inst_sram_req = branch_in_fs? 1'b1 :
+                                     fs_allowin && ~br_stall || WS_EX;
 
 // inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
 reg    inst_sram_en_reg;
@@ -161,7 +166,7 @@ always@(posedge clk) begin
     else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
         inst_sram_en_reg <= 1'b0         ;
     end
-    else if (fs_allowin) begin
+    else if (branch_in_fs?1'b1:fs_allowin) begin
         inst_sram_en_reg <= inst_sram_req;
     end
 end
