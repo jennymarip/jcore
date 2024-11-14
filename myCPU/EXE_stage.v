@@ -191,9 +191,8 @@ assign EXE_dest = es_dest & {5{es_valid}};
 
 reg [ 2:0] OF_TEST;
 
-assign es_ready_go    = (data_sram_req && ~ data_sram_en) ? 1'b0 :
-                                                           (data_sram_en ? data_sram_addr_ok : 
-                                                                           (~div_unfinished | MS_EX | WS_EX));
+assign es_ready_go    = data_sram_req ? ((data_sram_en && data_sram_addr_ok) || data_sram_en_and_ok) : 
+                                        (~div_unfinished | MS_EX | WS_EX);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -444,16 +443,28 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
 wire   data_sram_req;
 assign data_sram_req = (es_load_op || es_mem_we) && es_valid;
 assign mem_access    = data_sram_req         ;
-reg    data_sram_en_reg;
+reg    data_sram_en_reg   ;
+reg    data_sram_en_and_ok; // 表示数据请求地址握手成功但是指令仍然在ex
 always @(posedge clk) begin
+    // set data_sram_en_reg
     if (reset) begin
-        data_sram_en_reg <= 1'b0;
+        data_sram_en_reg    <= 1'b0;
     end
-    else if (data_sram_req && ~data_sram_en) begin
-        data_sram_en_reg <= data_sram_req;
+    else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
+        data_sram_en_reg    <= data_sram_req;
     end
-    else if (data_sram_addr_ok & ~ data_sram_data_ok) begin
-        data_sram_en_reg <= 1'b0;
+    else if (data_sram_addr_ok && data_sram_en) begin
+        data_sram_en_reg    <= 1'b0;
+    end
+    // set data_sram_en_and_ok
+    if (reset) begin
+        data_sram_en_and_ok <= 1'b0;
+    end
+    else if (es_allowin && ds_to_es_valid) begin
+        data_sram_en_and_ok <= 1'b0;
+    end
+    else if (data_sram_addr_ok && data_sram_en && ~ms_allowin) begin
+        data_sram_en_and_ok <= 1'b1;
     end
 end
 assign data_sram_en    = data_sram_en_reg && es_valid; // 只有es阶段有效,数据请求才能拉高
