@@ -85,7 +85,7 @@ always @(posedge clk) begin
         br_taken_reg  <=  1'b0    ;
         br_target_reg <= 32'b0    ;
     end
-    else if (br_taken & ~br_taken_reg) begin
+    else if (br_taken && ~br_stall && ~br_taken_reg) begin
         br_taken_reg  <= br_taken ;
         br_target_reg <= br_target;
     end
