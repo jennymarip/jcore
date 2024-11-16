@@ -10,6 +10,7 @@
 
     `define ST_WORD_LEN           4
     `define LD_WORD_LEN           6
+    `define MV_WORD_LEN           4
 
     `define CP0_EPC         5'b1110
     `define CP0_CAUSE       5'b1101

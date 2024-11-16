@@ -92,10 +92,7 @@ if_stage if_stage(
 );
 wire [ 3:0]               dm_word   ;
 wire [ `LD_WORD_LEN -1:0] ld_word   ;
-wire                      MFLO      ; 
-wire                      MFHI      ; 
-wire                      MTLO      ;
-wire                      MTHI      ;
+wire [ `MV_WORD_LEN -1:0] mv_word   ;
 wire [ `ST_WORD_LEN -1:0] st_word   ;
 wire                      MFC0      ; 
 wire [ 2:0]               of_test   ;
@@ -137,11 +134,8 @@ id_stage id_stage(
     .dm_word       (dm_word       ),
     // ld_word (LB / LBU / LH / LHU / LWL / LWR)
     .ld_word       (ld_word       ),
-    // MFLO, MFHI, MTLO, MTHI
-    .MFLO          (MFLO          ),
-    .MFHI          (MFHI          ),
-    .MTLO          (MTLO          ),
-    .MTHI          (MTHI          ),
+    // mv_word(MFLO, MFHI, MTLO, MTHI)
+    .mv_word       (mv_word       ),
     // st_word (SB / SH / SWL / SWR)
     .st_word       (st_word       ),
     // EX
@@ -162,13 +156,8 @@ id_stage id_stage(
     .cause         (cause         ),
     .status        (status        )
 );
-wire [ 1:0] LDB           ;
-wire        _LB           ;
-wire        _LBU          ;
-wire        _LH           ;
-wire        _LHU          ;
-wire        _LWL          ;
-wire        _LWR          ;
+wire [ 1:0] LDB                 ;
+wire [`LD_WORD_LEN-1:0] ld_word_;
 wire [31:0] rt_value      ;
 wire        mfc0_read     ;
 wire [ 4:0] mfc0_cp0_raddr;
@@ -208,17 +197,9 @@ exe_stage exe_stage(
     // ld_word LB / LBU / LH / LHU / LWL / LWR & LDB
     .ld_word        (ld_word        ),
     .LDB            (LDB            ),
-    ._LB            (_LB            ),
-    ._LBU           (_LBU           ),
-    ._LH            (_LH            ),
-    ._LHU           (_LHU           ),
-    ._LWL           (_LWL           ),
-    ._LWR           (_LWR           ),
-    // MFLO, MFHI, MTHI, MTLO
-    .MFLO           (MFLO           ),
-    .MFHI           (MFHI           ),
-    .MTLO           (MTLO           ),
-    .MTHI           (MTHI           ),
+    .ld_word_       (ld_word_       ),
+    // mv_word(MFLO / MFHI / MTHI / MTLO)
+    .mv_word        (mv_word        ),
     // rt
     .rt_value       (rt_value       ),
     // st_word (SB / SH / SWL / SWR)
@@ -261,12 +242,7 @@ mem_stage mem_stage(
     .ms_load_op     (ms_load_op     ),
     // LDB & LB / LBU / LH / LHU / LWL / LWR
     .LDB            (LDB            ),
-    ._LB            (_LB            ),
-    ._LBU           (_LBU           ),
-    ._LH            (_LH            ),
-    ._LHU           (_LHU           ),
-    ._LWL           (_LWL           ),
-    ._LWR           (_LWR           ),
+    .ld_word        (ld_word_       ),
     // rt
     .rt_value       (rt_value       ),
     // EX

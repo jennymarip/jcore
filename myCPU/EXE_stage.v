@@ -29,19 +29,11 @@ module exe_stage(
     // word of div and mul (div / divu / mult / multu)
     input  [ 3:0] dm_word       ,
     /// ld_word LB / LBU / LH / LHU / LWL / LWR & LDB
-    input  [`LD_WORD_LEN - 1 :0] ld_word,
-    output [ 1:0] LDB                   ,
-    output        _LB                   ,
-    output        _LBU                  ,
-    output        _LH                   ,
-    output        _LHU                  ,
-    output        _LWL                  ,
-    output        _LWR                  ,
-    // MFLO, MFHI, MTHI, MTLO
-    input         MFLO          ,
-    input         MFHI          ,
-    input         MTLO          ,
-    input         MTHI          ,
+    input  [`LD_WORD_LEN - 1 :0] ld_word ,
+    output [               1 :0] LDB     ,
+    output [`LD_WORD_LEN - 1 :0] ld_word_,
+    // mv_word(MFLO / MFHI / MTHI / MTLO)
+    input  [`MV_WORD_LEN - 1 :0] mv_word, 
     // rt
     output [31:0] rt_value      ,
     // st_word (SB / SH / SWL / SWR)
@@ -90,20 +82,21 @@ always @(posedge clk) begin
         {mflo,mfhi,mtlo,mthi,lb,lbu,lh,lhu,lwl,lwr,sb,sh,swl,swr,mfc0} <= 15'b0;
     end
     else if (ds_to_es_valid && es_allowin) begin
-        {mflo,mfhi,mtlo,mthi}        <= {MFLO,MFHI,MTLO,MTHI};
-        {lb, lbu, lh, lhu, lwl, lwr} <=        ld_word       ;
-        {sb, sh, swl, swr}           <=        st_word       ;
-        mfc0                         <=         MFC0         ;
+        {mflo, mfhi, mtlo, mthi}     <= mv_word;
+        {lb, lbu, lh, lhu, lwl, lwr} <= ld_word;
+        {sb, sh, swl, swr}           <= st_word;
+        mfc0                         <= MFC0   ;
     end
 end
-
-assign _LB   = lb  ;
-assign _LBU  = lbu ;
-assign _LH   = lh  ;
-assign _LHU  = lhu ;
-assign _LWL  = lwl ;
-assign _LWR  = lwr ;
-assign _MFC0 = mfc0;
+wire   _LB;
+wire   _LBU;
+wire   _LH;
+wire   _LHU;
+wire   _LWL;
+wire   _LWR;
+assign {_LB, _LBU, _LH, _LHU, _LWL, _LWR} = ld_word;
+assign ld_word_ = {lb, lbu, lh, lhu, lwl, lwr};
+assign _MFC0    = mfc0;
 wire   _LW;
 assign _LW   = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
 wire   SW ;

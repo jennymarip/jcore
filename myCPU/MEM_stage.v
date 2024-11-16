@@ -21,13 +21,8 @@ module mem_stage(
     output [31:0]                  MEM_dest_data ,
     output                         ms_load_op    ,
     // LDB & LB / LBU / LH / LHU / LWL
-    input  [ 1:0]                  LDB           ,
-    input                          _LB           ,
-    input                          _LBU          ,
-    input                          _LH           ,
-    input                          _LHU          ,
-    input                          _LWL          ,
-    input                          _LWR          ,
+    input  [               1 :0]   LDB           ,
+    input  [`LD_WORD_LEN - 1 :0]   ld_word       ,
     // rt
     input  [31:0]                  rt_value      ,
     // EX
@@ -53,26 +48,13 @@ reg [31:0] rt  ;
 reg        mfc0;
 always @(posedge clk) begin
     if(reset) begin
-        ldb <=  2'b0;
-        lb  <=  1'b0;
-        lbu <=  1'b0;
-        lh  <=  1'b0;
-        lhu <=  1'b0;
-        lwl <=  1'b0;
-        lwr <=  1'b0;
-        rt  <= 32'b0;
-        mfc0<=  1'b0;
+        {ldb, lb, lbu, lh, lhu, lwl, lwr, rt, mfc0} <= 9'b0;
     end
     else begin
-        ldb <= LDB     ;
-        lb  <= _LB     ;
-        lbu <= _LBU    ;
-        lh  <= _LH     ;
-        lhu <= _LHU    ;
-        lwl <= _LWL    ;
-        lwr <= _LWR    ;
-        rt  <= rt_value;
-        mfc0<= MFC0    ;
+        ldb                          <= LDB     ;
+        {lb, lbu, lh, lhu, lwl, lwr} <= ld_word ;
+        rt                           <= rt_value;
+        mfc0                         <= MFC0    ;
     end
 end
 

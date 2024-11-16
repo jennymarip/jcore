@@ -31,11 +31,8 @@ module id_stage(
     output [ 3:0]                  dm_word      ,
     // ld_word (LB / LBU / LH / LHU / LWL / LWR)
     output [`LD_WORD_LEN - 1 :0]   ld_word      ,
-    // MFLO, MFHI, MTHI, MTLO
-    output                         MFLO         ,
-    output                         MFHI         ,
-    output                         MTLO         ,
-    output                         MTHI         ,
+    // mv_word (MFLO / MFHI / MTHI / MTLO)
+    output [`MV_WORD_LEN - 1 :0]   mv_word      ,
     // st_word (SB / SH / SWL / SWR)
     output [`ST_WORD_LEN -1 :0]    st_word      ,
     // EX
@@ -353,10 +350,7 @@ assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
                      
 
 assign ld_word     = {inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr};
-assign MFLO        = inst_mflo;
-assign MFHI        = inst_mfhi;
-assign MTLO        = inst_mtlo;
-assign MTHI        = inst_mthi;
+assign mv_word     = {inst_mflo, inst_mfhi, inst_mtlo, inst_mthi};
 assign st_word     = {inst_sb, inst_sh, inst_swl, inst_swr} ;
 assign MFC0        = inst_mfc0 & ~ERET & ~ES_ERET & ~MS_ERET;
 assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET;
