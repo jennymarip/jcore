@@ -60,22 +60,11 @@ wire        es_ready_go   ;
 assign      rt_value = es_rt_value;
 assign      ES_EX    = (ex_code != `NO_EX) & es_valid;
 
-reg         div_unfinished;
-reg         mflo;
-reg         mfhi;
-reg         mtlo;
-reg         mthi;
-reg         lb  ;
-reg         lbu ;
-reg         lh  ;
-reg         lhu ;
-reg         lwl ;
-reg         lwr ;
-reg         sb  ;
-reg         sh  ;
-reg         swl ;
-reg         swr ;
-reg         mfc0;
+reg         div_unfinished            ;
+reg         mflo, mfhi, mtlo, mthi    ;
+reg         lb, lbu, lh, lhu, lwl, lwr;
+reg         sb, sh, swl, swr          ;
+reg         mfc0                      ;
 // 接受译码阶段传来的信息，当执行阶段停滞，这些信息也应该随之保留
 always @(posedge clk) begin
     if (reset) begin
@@ -88,19 +77,12 @@ always @(posedge clk) begin
         mfc0                         <= MFC0   ;
     end
 end
-wire   _LB;
-wire   _LBU;
-wire   _LH;
-wire   _LHU;
-wire   _LWL;
-wire   _LWR;
+wire   _LB, _LBU, _LH, _LHU, _LWL, _LWR;
 assign {_LB, _LBU, _LH, _LHU, _LWL, _LWR} = ld_word;
 assign ld_word_ = {lb, lbu, lh, lhu, lwl, lwr};
 assign _MFC0    = mfc0;
-wire   _LW;
+wire   _LW, SW, _SH;
 assign _LW   = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
-wire   SW ;
-wire   _SH;
 assign SW    = es_mem_we & ~sb & ~sh & ~swl & ~swr;
 assign _SH   = sh;
 

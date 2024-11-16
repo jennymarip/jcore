@@ -38,12 +38,7 @@ reg         ms_valid;
 wire        ms_ready_go;
 
 reg [ 1:0] ldb ;
-reg        lb  ;
-reg        lbu ;
-reg        lh  ;
-reg        lhu ;
-reg        lwl ;
-reg        lwr ;
+reg        lb, lbu, lh, lhu, lwl, lwr;
 reg [31:0] rt  ;
 reg        mfc0;
 always @(posedge clk) begin
