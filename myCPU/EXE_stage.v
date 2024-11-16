@@ -84,32 +84,16 @@ reg         sh  ;
 reg         swl ;
 reg         swr ;
 reg         mfc0;
+// 接受译码阶段传来的信息，当执行阶段停滞，这些信息也应该随之保留
 always @(posedge clk) begin
     if (reset) begin
-        mflo <= 1'b0;
-        mfhi <= 1'b0;
-        mtlo <= 1'b0;
-        mthi <= 1'b0;
-        lb   <= 1'b0;
-        lbu  <= 1'b0;
-        lh   <= 1'b0;
-        lhu  <= 1'b0;
-        lwl  <= 1'b0;
-        lwr  <= 1'b0;
-        sb   <= 1'b0;
-        sh   <= 1'b0;
-        swl  <= 1'b0;
-        swr  <= 1'b0;
-        mfc0 <= 1'b0;
+        {mflo,mfhi,mtlo,mthi,lb,lbu,lh,lhu,lwl,lwr,sb,sh,swl,swr,mfc0} <= 15'b0;
     end
-    else begin
-        mflo                         <= MFLO   ;
-        mfhi                         <= MFHI   ;
-        mtlo                         <= MTLO   ;
-        mthi                         <= MTHI   ;
-        {lb, lbu, lh, lhu, lwl, lwr} <= ld_word;
-        {sb, sh, swl, swr}           <= st_word;
-        mfc0                         <= MFC0   ;
+    else if (ds_to_es_valid && es_allowin) begin
+        {mflo,mfhi,mtlo,mthi}        <= {MFLO,MFHI,MTLO,MTHI};
+        {lb, lbu, lh, lhu, lwl, lwr} <=        ld_word       ;
+        {sb, sh, swl, swr}           <=        st_word       ;
+        mfc0                         <=         MFC0         ;
     end
 end
 
@@ -468,7 +452,7 @@ always @(posedge clk) begin
     end
 end
 assign data_sram_en    = data_sram_en_reg && es_valid; // 只有es阶段有效,数据请求才能拉高
-assign data_sram_wr    = es_mem_we ? 1'b1 : 1'b0     ;
+assign data_sram_wr    = es_mem_we                   ;
 assign data_sram_size  = 2'b10                       ; // to change
 assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                          (
