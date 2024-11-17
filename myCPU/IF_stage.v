@@ -34,7 +34,6 @@ wire        to_fs_valid;
 wire [31:0] seq_pc;
 wire [31:0] nextpc;
 
-wire         pre_fs_ready_go;
 
 // BU (pre decode => get is_branch when the instruction is in IF stage)
 // branch_in_fs indicates the instruction in the if-stage is branch-type
@@ -113,14 +112,29 @@ assign fs_to_ds_bus = {pc_error,
                        fs_pc   };
 
 // pre-IF stage
-assign to_fs_valid  = ~reset && pre_fs_ready_go    ;
-assign seq_pc       = fs_pc + 3'h4                 ;
+wire   pre_fs_ready_go     ;
+reg    pre_fs_ready_go_reg ;
+wire   pre_fs_ready_go_flag;
+assign pre_fs_ready_go_flag = pre_fs_ready_go || pre_fs_ready_go_reg;
+assign to_fs_valid  = ~reset && pre_fs_ready_go_flag;
+assign seq_pc       = fs_pc + 3'h4                  ;
 assign nextpc       = WS_EX       ? 32'hbfc00380                                                              : 
                       ERET        ? cp0_epc                                                                   :
                       is_slot_reg ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
                                     seq_pc;
 
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
+always@ (posedge clk) begin
+    if (reset) begin
+        pre_fs_ready_go_reg <= 1'b0;
+    end
+    else if (pre_fs_ready_go && ~fs_allowin) begin
+        pre_fs_ready_go_reg <= 1'b1;
+    end
+    else if (pre_fs_ready_go_reg && fs_allowin) begin
+        pre_fs_ready_go_reg <= 1'b0;
+    end
+end
 
 // IF stage
 // 保证跳转指令与延迟槽在相邻流水级
@@ -157,8 +171,7 @@ assign inst_sram_req = branch_in_fs? 1'b1 :
                                      fs_allowin && ~br_stall || WS_EX;
 
 // inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
-reg    inst_sram_en_reg;
-reg    inst_ready_reg  ;
+reg    inst_sram_en_reg, inst_ready_reg;
 always@(posedge clk) begin
     if (reset) begin
         inst_sram_en_reg <= inst_sram_req;
@@ -166,7 +179,7 @@ always@(posedge clk) begin
     else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
         inst_sram_en_reg <= 1'b0         ;
     end
-    else if (branch_in_fs?1'b1:fs_allowin) begin
+    else if (branch_in_fs ? ~pre_fs_ready_go_flag : fs_allowin) begin
         inst_sram_en_reg <= inst_sram_req;
     end
 end
