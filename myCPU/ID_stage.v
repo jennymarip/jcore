@@ -374,10 +374,10 @@ assign alu_op[12] = inst_div;
 assign alu_op[13] = inst_divu;
 
 assign load_op   = inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr;
-assign dm_word   = {inst_div ,
-                    inst_divu,
-                    inst_mult,
-                    inst_multu
+assign dm_word   = {inst_div   && ds_valid ,
+                    inst_divu  && ds_valid ,
+                    inst_mult  && ds_valid ,
+                    inst_multu && ds_valid
                    };
 
 assign src1_is_sa       = inst_sll   | inst_srl | inst_sra;
