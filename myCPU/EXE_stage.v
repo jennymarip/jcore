@@ -77,14 +77,11 @@ always @(posedge clk) begin
         mfc0                         <= MFC0   ;
     end
 end
-wire   _LB, _LBU, _LH, _LHU, _LWL, _LWR;
-assign {_LB, _LBU, _LH, _LHU, _LWL, _LWR} = ld_word;
 assign ld_word_ = {lb, lbu, lh, lhu, lwl, lwr};
 assign _MFC0    = mfc0;
-wire   _LW, SW, _SH;
-assign _LW   = es_load_op & ~_LB & ~_LBU & ~_LH & ~_LHU & ~_LWL & ~_LWR;
+wire   _LW, SW;
+assign _LW   = es_load_op & lb & lbu & ~lh & ~lhu & ~lwl & ~lwr;
 assign SW    = es_mem_we & ~sb & ~sh & ~swl & ~swr;
-assign _SH   = sh;
 
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 wire [13:0] es_alu_op          ;
@@ -379,8 +376,8 @@ assign EXE_dest_data   = es_final_result & {32{es_valid}}; // forward
 wire        BadAddr_R;
 wire        BadAddr_W;
 wire [31:0] BadVAddr;
-assign      BadAddr_R = (_LW & (LDB != 2'b0)) | ((_LH | _LHU) & LDB[0]);
-assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (_SH & LDB[0]);
+assign      BadAddr_R = (_LW & (LDB != 2'b0)) | ((lh | lhu) & LDB[0]);
+assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (sh & LDB[0]);
 assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
                                    (BadAddr_R | BadAddr_W) ? data_sram_addr          :
                                                              32'b0;
@@ -452,7 +449,7 @@ assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
 assign data_sram_addr  = es_alu_result;
 assign data_sram_wdata = st_data;
 
-assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | _SH}};
+assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | sh}};
 
 // READ CP0
 assign mfc0_read      = mfc0;

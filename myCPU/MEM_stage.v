@@ -45,7 +45,7 @@ always @(posedge clk) begin
     if(reset) begin
         {ldb, lb, lbu, lh, lhu, lwl, lwr, rt, mfc0} <= 9'b0;
     end
-    else begin
+    else if (es_to_ms_valid && ms_allowin) begin
         ldb                          <= LDB     ;
         {lb, lbu, lh, lhu, lwl, lwr} <= ld_word ;
         rt                           <= rt_value;
