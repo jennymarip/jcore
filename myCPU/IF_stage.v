@@ -92,13 +92,14 @@ always @(posedge clk) begin
         br_taken_reg  <=  1'b0    ;
     end
 end
-// EX test
-wire        WS_EX   ;
-wire [31:0] fs_inst ;
-reg  [31:0] fs_pc   ;
-wire [ 4:0] ex_code ;
-wire [31:0] BadVAddr;
-wire        pc_error;
+// EX unit
+wire        WS_EX    ;
+reg         WS_EX_reg;
+wire [31:0] fs_inst  ;
+reg  [31:0] fs_pc    ;
+wire [ 4:0] ex_code  ;
+wire [31:0] BadVAddr ;
+wire        pc_error ;
 
 assign WS_EX        = ex_word[0]                                               ;
 assign fs_inst      = inst_sram_rdata                                          ;
@@ -110,6 +111,17 @@ assign fs_to_ds_bus = {pc_error,
                        ex_code ,
                        fs_inst ,
                        fs_pc   };
+always @ (posedge clk) begin
+    if (reset) begin
+        WS_EX_reg <= 1'b0;
+    end
+    else if (WS_EX) begin
+        WS_EX_reg <= 1'b1;
+    end
+    else if (pre_fs_ready_go && fs_allowin) begin
+        WS_EX_reg <= 1'b0;
+    end
+end
 
 // pre-IF stage
 wire   pre_fs_ready_go     ;
@@ -118,10 +130,10 @@ wire   pre_fs_ready_go_flag;
 assign pre_fs_ready_go_flag = pre_fs_ready_go || pre_fs_ready_go_reg;
 assign to_fs_valid  = ~reset && pre_fs_ready_go_flag;
 assign seq_pc       = fs_pc + 3'h4                  ;
-assign nextpc       = WS_EX       ? 32'hbfc00380                                                              : 
-                      ERET        ? cp0_epc                                                                   :
-                      is_slot_reg ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
-                                    seq_pc;
+assign nextpc       = WS_EX || WS_EX_reg ? 32'hbfc00380                                                              : 
+                      ERET  || ERET_reg  ? (ERET ? cp0_epc : cp0_epc_reg)                                            :
+                      is_slot_reg        ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
+                                            seq_pc;
 
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
 always@ (posedge clk) begin
@@ -133,6 +145,21 @@ always@ (posedge clk) begin
     end
     else if (pre_fs_ready_go_reg && fs_allowin) begin
         pre_fs_ready_go_reg <= 1'b0;
+    end
+end
+reg        ERET_reg   ;
+reg [31:0] cp0_epc_reg;
+always @ (posedge clk) begin
+    if (reset) begin
+        ERET_reg    <=  1'b0;
+        cp0_epc_reg <= 32'b0;
+    end
+    else if (ERET) begin
+        ERET_reg    <=    1'b1;
+        cp0_epc_reg <= cp0_epc;
+    end
+    else if (pre_fs_ready_go && fs_allowin) begin
+        ERET_reg <= 1'b0;
     end
 end
 
@@ -148,9 +175,6 @@ always @(posedge clk) begin
     if (reset) begin
         fs_valid <= 1'b0;
     end
-    else if (WS_EX) begin
-        fs_valid <= 1'b1;
-    end
     else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
     end
@@ -158,7 +182,7 @@ always @(posedge clk) begin
     if (reset) begin
         fs_pc <= 32'hbfbffffc;  // trick: to make seq_pc be 0xbfc00000 during reset 
     end
-    else if (to_fs_valid && fs_allowin || WS_EX || ERET) begin
+    else if (to_fs_valid && fs_allowin || ERET) begin
         fs_pc <= nextpc;
     end
 end
@@ -167,8 +191,8 @@ end
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 // 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
 wire   inst_sram_req;
-assign inst_sram_req = branch_in_fs? 1'b1 :
-                                     fs_allowin && ~br_stall || WS_EX;
+assign inst_sram_req = (branch_in_fs? 1'b1 :
+                                     fs_allowin && ~br_stall) || (WS_EX || WS_EX_reg);
 
 // inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
 reg    inst_sram_en_reg, inst_ready_reg;
