@@ -115,7 +115,7 @@ always @ (posedge clk) begin
     if (reset) begin
         WS_EX_reg <= 1'b0;
     end
-    else if (WS_EX) begin
+    else if (WS_EX && ~ pre_fs_ready_go_flag) begin
         WS_EX_reg <= 1'b1;
     end
     else if (pre_fs_ready_go && fs_allowin) begin
@@ -154,7 +154,7 @@ always @ (posedge clk) begin
         ERET_reg    <=  1'b0;
         cp0_epc_reg <= 32'b0;
     end
-    else if (ERET) begin
+    else if (ERET && ~pre_fs_ready_go_flag) begin
         ERET_reg    <=    1'b1;
         cp0_epc_reg <= cp0_epc;
     end
