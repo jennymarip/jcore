@@ -73,10 +73,12 @@ wire [31:0] ds_inst ;
 wire [31:0] ds_pc   ;
 wire [31:0] BadVAddr;
 wire        pc_error;
+wire        slot    ;
 assign {ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
-assign {pc_error,
-        BadVAddr} = fs_to_ds_bus_r[101:69];
+assign {slot    ,
+        pc_error,
+        BadVAddr} = fs_to_ds_bus_r[102:69];
 
 wire        rf_we   ;
 wire [ 4:0] rf_waddr;
@@ -419,18 +421,10 @@ assign rt_value = rt_wait ? (rt == EXE_dest ?  EXE_dest_data :
                              rt == MEM_dest ?  MEM_dest_data : WB_dest_data)
                             : rf_rdata2;
 
-// BU (这里逻辑默认是分支指令的下一个节拍出现的一定是延迟槽指令，这是错误的，未来会修改)
-reg    slot;
+// BU
+
 assign is_branch = (inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz | inst_bltzal | inst_bgezal | inst_jal | inst_jalr | inst_j | inst_jr) & ds_valid;
 
-always @(posedge clk) begin
-    if (reset) begin
-        slot <=   1'b0   ;
-    end
-    else begin
-        slot <= is_branch;
-    end
-end
 assign rs_eq_rt   = (rs_value == rt_value);
 assign rs_ge_zero = ($signed(rs_value) >= 0);
 assign rs_gt_zero = ($signed(rs_value)  > 0);

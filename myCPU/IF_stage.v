@@ -106,10 +106,11 @@ assign fs_inst      = inst_sram_rdata                                          ;
 assign ex_code      = (ex_word == 4'b0) & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
 assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0                       ;
 assign pc_error     = (ex_code == `ADEL)                                       ;
-assign fs_to_ds_bus = {pc_error,
-                       BadVAddr,
-                       ex_code ,
-                       fs_inst ,
+assign fs_to_ds_bus = {is_slot_reg,
+                       pc_error   ,
+                       BadVAddr   ,
+                       ex_code    ,
+                       fs_inst    ,
                        fs_pc   };
 always @ (posedge clk) begin
     if (reset) begin
@@ -177,6 +178,9 @@ always @(posedge clk) begin
     end
     else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
+    end
+    else if (WS_EX) begin
+        fs_valid <= 1'b0;
     end
     // set fs_pc
     if (reset) begin
