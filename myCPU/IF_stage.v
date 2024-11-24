@@ -45,8 +45,8 @@ reg          is_slot_reg  ;
 wire         branch_in_fs ;
 assign       branch_in_fs = is_branch || is_branch_reg;
 pre_decode pre_decode(
-    .fs_inst   (fs_inst & {32{inst_sram_data_ok}}),
-    .is_branch (is_branch                        ) 
+    .fs_inst   (fs_inst & {32{inst_sram_data_ok && ~quit_a_data_ok_flag}}),
+    .is_branch (is_branch                                                ) 
 );
 always @(posedge clk) begin
     // set is_branch_reg
@@ -90,6 +90,22 @@ always @(posedge clk) begin
     end
     else if (is_slot_reg && fs_allowin && to_fs_valid) begin
         br_taken_reg  <=  1'b0    ;
+    end
+end
+// quit a data_ok : 当WB阶段处于异常，但是已经有部分指令地址握手了，那么有可能接下来返回的dataok是无效的，应该被丢弃
+wire quit_a_data_ok, quit_a_data_ok_flag;
+reg  quit_a_data_ok_reg;
+assign quit_a_data_ok_flag = quit_a_data_ok || quit_a_data_ok_reg;
+assign quit_a_data_ok      = WS_EX && (fs_valid || (to_fs_valid && ~(inst_sram_en && inst_sram_addr_ok)));
+always @ (posedge clk) begin
+    if (reset) begin
+        quit_a_data_ok_reg <= 1'b0;
+    end
+    else if (quit_a_data_ok && ~inst_sram_data_ok) begin
+        quit_a_data_ok_reg <= 1'b1;
+    end
+    else if (quit_a_data_ok_reg && inst_sram_data_ok) begin
+        quit_a_data_ok_reg <= 1'b0;
     end
 end
 // EX unit
@@ -167,7 +183,7 @@ end
 // IF stage
 // 保证跳转指令与延迟槽在相邻流水级
 assign fs_ready_go    = branch_in_fs ? to_fs_valid :
-                                      (inst_ready_reg | inst_sram_data_ok);
+                                      (inst_ready_reg | (inst_sram_data_ok && ~quit_a_data_ok_flag));
 assign fs_allowin     = !fs_valid || fs_ready_go && ds_allowin;
 assign fs_to_ds_valid =  fs_valid && fs_ready_go              ;
 
@@ -204,7 +220,8 @@ always@(posedge clk) begin
     if (reset) begin
         inst_sram_en_reg <= inst_sram_req;
     end
-    else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
+    // else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
+    else if (inst_sram_addr_ok) begin
         inst_sram_en_reg <= 1'b0         ;
     end
     else if (branch_in_fs ? ~pre_fs_ready_go_flag : fs_allowin) begin
@@ -215,7 +232,7 @@ always @(posedge clk) begin
     if (reset) begin
         inst_ready_reg <= 1'b0;
     end
-    else if (inst_sram_data_ok) begin
+    else if (inst_sram_data_ok && ~quit_a_data_ok_flag) begin
         inst_ready_reg <= 1'b1;
     end
     else if (inst_sram_addr_ok && inst_sram_en) begin
