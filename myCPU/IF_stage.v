@@ -96,7 +96,8 @@ end
 wire quit_a_data_ok, quit_a_data_ok_flag;
 reg  quit_a_data_ok_reg;
 assign quit_a_data_ok_flag = quit_a_data_ok || quit_a_data_ok_reg;
-assign quit_a_data_ok      = WS_EX && (fs_valid || (to_fs_valid && ~(inst_sram_en && inst_sram_addr_ok)));
+assign quit_a_data_ok      = WS_EX && 
+                             (fs_valid && ~inst_ready_reg || (to_fs_valid && ~(inst_sram_en && inst_sram_addr_ok)));
 always @ (posedge clk) begin
     if (reset) begin
         quit_a_data_ok_reg <= 1'b0;

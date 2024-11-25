@@ -80,7 +80,7 @@ end
 assign ld_word_ = {lb, lbu, lh, lhu, lwl, lwr};
 assign _MFC0    = mfc0;
 wire   _LW, SW;
-assign _LW   = es_load_op & lb & lbu & ~lh & ~lhu & ~lwl & ~lwr;
+assign _LW   = es_load_op & ~lb & ~lbu & ~lh & ~lhu & ~lwl & ~lwr;
 assign SW    = es_mem_we & ~sb & ~sh & ~swl & ~swr;
 
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
@@ -148,7 +148,7 @@ assign EXE_dest = es_dest & {5{es_valid}};
 reg [ 2:0] OF_TEST;
 
 assign es_ready_go    = data_sram_req ? ((data_sram_en && data_sram_addr_ok) || data_sram_en_and_ok) : 
-                                        (~div_unfinished | MS_EX | WS_EX);
+                                        (~div_unfinished | ES_EX | MS_EX | WS_EX);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -397,7 +397,7 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  es_rt_value[31:0];
 // data sram interface
 wire   data_sram_req;
-assign data_sram_req = (es_load_op || es_mem_we) && es_valid;
+assign data_sram_req = (es_load_op || es_mem_we) && es_valid && ~ES_EX;
 assign mem_access    = data_sram_req         ;
 reg    data_sram_en_reg   ;
 reg    data_sram_en_and_ok; // 表示数据请求地址握手成功但是指令仍然在ex
