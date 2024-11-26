@@ -22,6 +22,7 @@ module exe_stage(
     input         data_sram_addr_ok,
     input         data_sram_data_ok,
     // to ds data dependence
+    output        inst_mfc0     ,
     output [ 4:0] EXE_dest      ,
     output        es_load_op    ,
     // forward
@@ -45,13 +46,7 @@ module exe_stage(
     input         ERET          ,
     input         MS_ERET       ,
     output        ES_ERET       ,
-    input         MFC0          ,
-    output        _MFC0         ,
-    input  [ 2:0] of_test       , // single hot
-    // READ CP0
-    output        mfc0_read     ,
-    output [ 4:0] mfc0_cp0_raddr,
-    input  [31:0] mfc0_rdata
+    input  [ 2:0] of_test       // single hot
 ); 
 
 reg         es_valid      ;
@@ -64,21 +59,18 @@ reg         div_unfinished            ;
 reg         mflo, mfhi, mtlo, mthi    ;
 reg         lb, lbu, lh, lhu, lwl, lwr;
 reg         sb, sh, swl, swr          ;
-reg         mfc0                      ;
 // 接受译码阶段传来的信息，当执行阶段停滞，这些信息也应该随之保留
 always @(posedge clk) begin
     if (reset) begin
-        {mflo,mfhi,mtlo,mthi,lb,lbu,lh,lhu,lwl,lwr,sb,sh,swl,swr,mfc0} <= 15'b0;
+        {mflo,mfhi,mtlo,mthi,lb,lbu,lh,lhu,lwl,lwr,sb,sh,swl,swr} <= 14'b0;
     end
     else if (ds_to_es_valid && es_allowin) begin
         {mflo, mfhi, mtlo, mthi}     <= mv_word;
         {lb, lbu, lh, lhu, lwl, lwr} <= ld_word;
         {sb, sh, swl, swr}           <= st_word;
-        mfc0                         <= MFC0   ;
     end
 end
 assign ld_word_ = {lb, lbu, lh, lhu, lwl, lwr};
-assign _MFC0    = mfc0;
 wire   _LW, SW;
 assign _LW   = es_load_op & ~lb & ~lbu & ~lh & ~lhu & ~lwl & ~lwr;
 assign SW    = es_mem_we & ~sb & ~sh & ~swl & ~swr;
@@ -102,6 +94,8 @@ wire [ 4:0] rd                 ;
 wire        slot               ;
 wire        eret               ;
 wire        pc_error           ;
+wire        es_inst_mtc0       ;
+wire        es_inst_mfc0       ;
 wire        mem_access         ;
 assign {eret               ,  //145:145
         slot               ,  //144:144
@@ -131,7 +125,10 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {mem_access       ,  //111:111
+assign es_to_ms_bus = {rd               ,  //118:114      
+                       es_inst_mfc0     ,  //113:113
+                       es_inst_mtc0     ,  //112:112
+                       mem_access       ,  //111:111
                        pc_error         ,  //110:110
                        BadVAddr         ,  //109:78
                        ex_code          ,  //77:73
@@ -143,7 +140,8 @@ assign es_to_ms_bus = {mem_access       ,  //111:111
                        es_final_result  ,  //63:32
                        es_pc               //31:0
                       };
-assign EXE_dest = es_dest & {5{es_valid}};
+assign EXE_dest  = es_dest & {5{es_valid}};
+assign inst_mfc0 = es_inst_mfc0;
 
 reg [ 2:0] OF_TEST;
 
@@ -181,9 +179,10 @@ alu u_alu(
     .alu_src2      (es_alu_src2  ),
     .alu_result    (es_alu_result)
     );
-assign es_final_result = mfc0 ? mfc0_rdata : 
-                         mflo ? LO : 
-                         mfhi ? HI : es_alu_result;
+assign es_final_result = mflo         ? LO         : 
+                         mfhi         ? HI         : 
+                         es_inst_mtc0 ? rt_value   :
+                                        es_alu_result;
 // overflow test
 wire [ 2:0] OF_TEST_;
 assign OF_TEST_ = OF_TEST;
@@ -381,7 +380,9 @@ assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (sh & LDB[0]);
 assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
                                    (BadAddr_R | BadAddr_W) ? data_sram_addr          :
                                                              32'b0;
-assign      pc_error  = ds_to_es_bus_r[183];
+assign      pc_error     = ds_to_es_bus_r[183];
+assign      es_inst_mtc0 = ds_to_es_bus_r[184];
+assign      es_inst_mfc0 = ds_to_es_bus_r[185];
 // R / W
 wire [31:0]  st_data;
 assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
@@ -450,9 +451,5 @@ assign data_sram_addr  = es_alu_result;
 assign data_sram_wdata = st_data;
 
 assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | sh}};
-
-// READ CP0
-assign mfc0_read      = mfc0;
-assign mfc0_cp0_raddr = rd  ;
 
 endmodule

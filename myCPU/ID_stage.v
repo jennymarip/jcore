@@ -17,6 +17,9 @@ module id_stage(
     //to rf: for write back
     input  [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus  ,
     //from es,ms,ws data dependence
+    input                          es_inst_mfc0     ,
+    input                          ms_inst_mfc0     ,
+    input                          ws_inst_mfc0     ,
     input  [ 4:0]                  EXE_dest         ,
     input  [ 4:0]                  MEM_dest         ,
     input  [ 4:0]                  WB_dest          ,
@@ -43,12 +46,7 @@ module id_stage(
     input                          ERET         ,
     input                          ES_ERET      ,
     input                          MS_ERET      ,
-    output                         MFC0         ,
     output [ 2:0]                  of_test      ,
-    // CP0 WRITE
-    output                         MTC0         ,
-    output [31:0]                  mtc0_wdata   ,
-    output [ 4:0]                  mtc0_waddr   ,
     // interrupt
     input  [31:0]                  cause        ,
     input  [31:0]                  status
@@ -58,6 +56,10 @@ reg         ds_valid   ;
 wire        ds_ready_go;
 
 assign DS_EX = (ex_code != `NO_EX) & ds_valid;
+// mfc0 wait
+wire   mfc0_stall;
+assign mfc0_stall = (rs_wait && ((es_inst_mfc0 && (rs == EXE_dest)) || (ms_inst_mfc0 && (rs == MEM_dest)) || (ws_inst_mfc0 && (rs == WB_dest)))) ||
+                    (rt_wait && ((es_inst_mfc0 && (rt == EXE_dest)) || (ms_inst_mfc0 && (rt == MEM_dest)) || (ws_inst_mfc0 && (rt == WB_dest))));
 // branch
 wire   br_stall;
 wire   load_stall;
@@ -206,7 +208,9 @@ wire        eret   ;
 
 assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {pc_error        ,  //183:183
+assign ds_to_es_bus = {inst_mfc0       ,  //185:185
+                       inst_mtc0       ,  //184:184
+                       pc_error        ,  //183:183
                        BadVAddr        ,  //182:151
                        ex_code         ,  //150:146
                        eret            ,  //145:145
@@ -244,9 +248,9 @@ assign inst_no_dest = inst_beq | inst_bgez | inst_bne | inst_bgtz | inst_blez | 
                       inst_j | inst_jr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr |
                       inst_div | inst_divu | inst_mult | inst_multu | 
                       inst_mthi | inst_mtlo |
-                      inst_syscall | inst_break | inst_mtc0;
+                      inst_syscall | inst_break;
 
-assign ds_ready_go    = ds_valid & ~load_stall;
+assign ds_ready_go    = ds_valid && ~load_stall && ~mfc0_stall;
 assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
 always @(posedge clk) begin
@@ -354,10 +358,7 @@ assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
 assign ld_word     = {inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr};
 assign mv_word     = {inst_mflo, inst_mfhi, inst_mtlo, inst_mthi};
 assign st_word     = {inst_sb, inst_sh, inst_swl, inst_swr} ;
-assign MFC0        = inst_mfc0 & ~ERET & ~ES_ERET & ~MS_ERET;
-assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET & ~(WS_EX || MS_EX || ES_EX) & ds_valid;
-assign mtc0_wdata  = rt_value ;
-assign mtc0_waddr  = rd       ;
+// assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET & ~(WS_EX || MS_EX || ES_EX) & ds_valid;
 assign of_test     = {inst_sub, inst_addi, inst_add}        ;
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr | inst_j | inst_jal | inst_jalr | inst_bgezal | inst_bltzal | inst_add | inst_addi;
@@ -393,7 +394,8 @@ assign dst_is_rt        = inst_addiu | inst_addi | inst_lui | inst_lw | inst_lb 
 assign gr_we            = ~inst_sw & ~inst_sb & ~inst_sh & ~inst_swl & ~inst_swr & ~inst_beq & ~inst_bne & ~inst_bgez & ~inst_bgtz & ~inst_blez & ~inst_bltz & 
                           ~inst_jr & ~inst_j & 
                           ~inst_div & ~inst_divu & ~inst_mult & ~inst_multu & 
-                          ~inst_mthi & ~inst_mtlo;
+                          ~inst_mthi & ~inst_mtlo &
+                          ~inst_mtc0;
 assign mem_we           = inst_sw | inst_sb | inst_sh | inst_swl | inst_swr;
 
 assign dest             = dst_is_r31   ? 5'd31 :

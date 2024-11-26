@@ -90,18 +90,17 @@ if_stage if_stage(
     .cp0_epc          (cp0_epc          ),
     .ex_word          (ex_word          )
 );
-wire [ 3:0]               dm_word   ;
-wire [ `LD_WORD_LEN -1:0] ld_word   ;
-wire [ `MV_WORD_LEN -1:0] mv_word   ;
-wire [ `ST_WORD_LEN -1:0] st_word   ;
-wire                      MFC0      ; 
-wire [ 2:0]               of_test   ;
-wire                      MTC0      ;
-wire [31:0]               mtc0_wdata;
-wire [ 4:0]               mtc0_waddr;
-wire                      ES_ERET   ;
-wire [31:0]               cause     ;
-wire [31:0]               status    ;
+wire [ 3:0]               dm_word     ;
+wire [ `LD_WORD_LEN -1:0] ld_word     ;
+wire [ `MV_WORD_LEN -1:0] mv_word     ;
+wire [ `ST_WORD_LEN -1:0] st_word     ; 
+wire [ 2:0]               of_test     ;
+wire                      ES_ERET     ;
+wire [31:0]               cause       ;
+wire [31:0]               status      ;
+wire                      es_inst_mfc0;
+wire                      ms_inst_mfc0;
+wire                      ws_inst_mfc0;
 // ID stage
 id_stage id_stage(
     .clk            (clk            ),
@@ -120,6 +119,9 @@ id_stage id_stage(
     //to rf: for write back
     .ws_to_rf_bus   (ws_to_rf_bus   ),
     //from es,ms,ws
+    .es_inst_mfc0      (es_inst_mfc0     ),
+    .ms_inst_mfc0      (ms_inst_mfc0     ),
+    .ws_inst_mfc0      (ws_inst_mfc0     ),
     .EXE_dest          (EXE_dest         ),
     .MEM_dest          (MEM_dest         ),
     .WB_dest           (WB_dest          ),
@@ -146,12 +148,7 @@ id_stage id_stage(
     .ERET          (ERET          ),
     .ES_ERET       (ES_ERET       ),
     .MS_ERET       (MS_ERET       ),
-    .MFC0          (MFC0          ),
     .of_test       (of_test       ),
-    // CP0 WRITE
-    .MTC0          (MTC0          ),
-    .mtc0_wdata    (mtc0_wdata    ),
-    .mtc0_waddr    (mtc0_waddr    ),
     // interrupt
     .cause         (cause         ),
     .status        (status        )
@@ -159,10 +156,6 @@ id_stage id_stage(
 wire [ 1:0] LDB                 ;
 wire [`LD_WORD_LEN-1:0] ld_word_;
 wire [31:0] rt_value      ;
-wire        mfc0_read     ;
-wire [ 4:0] mfc0_cp0_raddr;
-wire        _MFC0         ;
-wire [31:0] mfc0_rdata    ;
 wire        MS_EX         ;
 wire        MS_ERET       ;
 // EXE stage
@@ -188,6 +181,7 @@ exe_stage exe_stage(
     .data_sram_addr_ok(data_sram_addr_ok),
     .data_sram_data_ok(data_sram_data_ok),
     //data dependence
+    .inst_mfc0      (es_inst_mfc0   ),
     .EXE_dest       (EXE_dest       ),
     .es_load_op     (es_load_op     ),
     //forward
@@ -211,13 +205,7 @@ exe_stage exe_stage(
     .ERET           (ERET           ),
     .MS_ERET        (MS_ERET        ),
     .ES_ERET        (ES_ERET        ),
-    .MFC0           (MFC0           ),
-    ._MFC0          (_MFC0          ),
-    .of_test        (of_test        ),
-    // READ CP0
-    .mfc0_read      (mfc0_read      ),
-    .mfc0_cp0_raddr (mfc0_cp0_raddr ),
-    .mfc0_rdata     (mfc0_rdata     )
+    .of_test        (of_test        )
 );
 // MEM stage
 mem_stage mem_stage(
@@ -236,6 +224,7 @@ mem_stage mem_stage(
     .data_sram_data_ok(data_sram_data_ok),
     .data_sram_rdata  (data_sram_rdata  ),
     //data dependence
+    .inst_mfc0      (ms_inst_mfc0   ),
     .MEM_dest       (MEM_dest       ),
     //forward
     .MEM_dest_data  (MEM_dest_data  ),
@@ -249,9 +238,7 @@ mem_stage mem_stage(
     .WS_EX          (WS_EX          ),
     .ERET           (ERET           ),
     .MS_ERET        (MS_ERET        ),
-    .MS_EX          (MS_EX          ),
-    // READ CP0
-    .MFC0           (_MFC0          )
+    .MS_EX          (MS_EX          )
 );
 // WB stage
 wb_stage wb_stage(
@@ -270,6 +257,7 @@ wb_stage wb_stage(
     .debug_wb_rf_wnum (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata(debug_wb_rf_wdata),
     //data dependence
+    .inst_mfc0        (ws_inst_mfc0     ),
     .WB_dest          (WB_dest          ),
     //forward
     .WB_dest_data     (WB_dest_data     ),
@@ -277,14 +265,6 @@ wb_stage wb_stage(
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
     .ERET             (ERET             ),
-    // READ CP0
-    .mfc0_read        (mfc0_read        ),
-    .mfc0_cp0_raddr   (mfc0_cp0_raddr   ),
-    .mfc0_rdata       (mfc0_rdata       ),
-    // MTC0 WRITE
-    .MTC0             (MTC0             ),
-    .mtc0_wdata       (mtc0_wdata       ),
-    .mtc0_waddr       (mtc0_waddr       ),
     // interrupt
     .cause            (cause            ),
     .status           (status           )

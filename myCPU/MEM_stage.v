@@ -16,6 +16,7 @@ module mem_stage(
     input                          data_sram_data_ok,
     input  [31:0]                  data_sram_rdata  ,
     //to ds data dependence
+    output                         inst_mfc0     ,
     output [ 4:0]                  MEM_dest      ,
     //forward
     output [31:0]                  MEM_dest_data ,
@@ -29,9 +30,7 @@ module mem_stage(
     input                          WS_EX         ,
     input                          ERET          ,
     output                         MS_ERET       ,
-    output                         MS_EX         ,
-    // READ CP0
-    input                          MFC0
+    output                         MS_EX
 );
 
 reg         ms_valid;
@@ -40,16 +39,14 @@ wire        ms_ready_go;
 reg [ 1:0] ldb ;
 reg        lb, lbu, lh, lhu, lwl, lwr;
 reg [31:0] rt  ;
-reg        mfc0;
 always @(posedge clk) begin
     if(reset) begin
-        {ldb, lb, lbu, lh, lhu, lwl, lwr, rt, mfc0} <= 9'b0;
+        {ldb, lb, lbu, lh, lhu, lwl, lwr, rt} <= 8'b0;
     end
     else if (es_to_ms_valid && ms_allowin) begin
         ldb                          <= LDB     ;
         {lb, lbu, lh, lhu, lwl, lwr} <= ld_word ;
         rt                           <= rt_value;
-        mfc0                         <= MFC0    ;
     end
 end
 
@@ -58,14 +55,20 @@ wire        ms_res_from_mem;
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
-wire [31:0] ms_pc   ;
-wire        slot    ;
-wire        eret    ;
-wire [ 4:0] ex_code ;
-wire [31:0] BadVAddr;
-wire        pc_error;
-wire        mem_access;
-assign {mem_access     ,  //111:111
+wire [31:0] ms_pc       ;
+wire        slot        ;
+wire        eret        ;
+wire [ 4:0] ex_code     ;
+wire [31:0] BadVAddr    ;
+wire        pc_error    ;
+wire        mem_access  ;
+wire        ms_inst_mtc0;
+wire        ms_inst_mfc0;
+wire [ 4:0] rd          ;
+assign {rd             ,  //118:114
+        ms_inst_mfc0   ,  //113:113
+        ms_inst_mtc0   ,  //112:112
+        mem_access     ,  //111:111
         pc_error       ,  //110:110
         BadVAddr       ,  //109:78
         ex_code        ,  //77:73
@@ -91,9 +94,13 @@ wire [31:0] LWR_result     ;
 wire [31:0] mem_result     ;
 wire [31:0] ms_final_result;
 
-assign MEM_dest = ms_dest & {5{ms_valid}};
+assign MEM_dest  = ms_dest & {5{ms_valid}};
+assign inst_mfc0 = ms_inst_mfc0;
 
-assign ms_to_ws_bus = {pc_error       ,  //109:109
+assign ms_to_ws_bus = {rd             ,  //116:112
+                       ms_inst_mfc0   ,  //111:111
+                       ms_inst_mtc0   ,  //110:110
+                       pc_error       ,  //109:109
                        BadVAddr       ,  //108:77
                        ex_code        ,  //76:72
                        eret           ,  //71:71
