@@ -68,7 +68,7 @@ always @(posedge clk) begin
     else if (mtc0 & (mtc0_waddr == `CP0_CAUSE)) begin
         cp0_cause_ip[7:0] <= mtc0_wdata[15:8];
     end
-    if (cp0_cause_ti) begin
+    else begin
         cp0_cause_ip[7] <= cp0_cause_ti;
     end
 end

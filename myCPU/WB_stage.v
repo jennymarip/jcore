@@ -23,10 +23,7 @@ module wb_stage(
     // EX
     output        WS_EX           ,
     output [31:0] cp0_epc         ,
-    output        ERET            ,
-    // interrupt
-    output [31:0] cause           ,
-    output [31:0] status
+    output        ERET
 );
 
 reg         ws_valid;
@@ -49,16 +46,15 @@ assign {rd             ,  //116:112
         ws_inst_mfc0   ,  //111:111
         ws_inst_mtc0   ,  //110:110
         pc_error       ,  //109:109
-        BadVAddr       ,  //108:77
-        ex_code        ,  //76:72
-        eret           ,  //71:71
+        BadVAddr          //108:77
+       } = ms_to_ws_bus_r[116:77];
+assign {eret           ,  //71:71
         slot           ,  //70:70
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
         ws_pc             //31:0
-       } = ms_to_ws_bus_r;
-
+       } = ms_to_ws_bus_r[71:0];
 wire        rf_we;
 wire [4 :0] rf_waddr;
 wire [31:0] rf_wdata;
@@ -101,6 +97,13 @@ assign debug_wb_rf_wnum  = ws_dest;
 assign debug_wb_rf_wdata = rf_wdata;
 
 // EX
+wire [31:0] cause    ;
+wire [31:0] status   ;
+wire        interrupt;
+assign interrupt = ((cause[15:8] & status[15:8]) != 8'b0) && (status[1:0] == 2'b01) && ws_valid;
+assign ex_code = interrupt ? `INT :
+                              ms_to_ws_bus_r[76:72];
+
 assign WS_EX = (ex_code != `NO_EX);
 assign ERET  = eret ;
 

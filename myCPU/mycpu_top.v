@@ -96,8 +96,6 @@ wire [ `MV_WORD_LEN -1:0] mv_word     ;
 wire [ `ST_WORD_LEN -1:0] st_word     ; 
 wire [ 2:0]               of_test     ;
 wire                      ES_ERET     ;
-wire [31:0]               cause       ;
-wire [31:0]               status      ;
 wire                      es_inst_mfc0;
 wire                      ms_inst_mfc0;
 wire                      ws_inst_mfc0;
@@ -148,10 +146,7 @@ id_stage id_stage(
     .ERET          (ERET          ),
     .ES_ERET       (ES_ERET       ),
     .MS_ERET       (MS_ERET       ),
-    .of_test       (of_test       ),
-    // interrupt
-    .cause         (cause         ),
-    .status        (status        )
+    .of_test       (of_test       )
 );
 wire [ 1:0] LDB                 ;
 wire [`LD_WORD_LEN-1:0] ld_word_;
@@ -264,10 +259,7 @@ wb_stage wb_stage(
     // EX
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
-    .ERET             (ERET             ),
-    // interrupt
-    .cause            (cause            ),
-    .status           (status           )
+    .ERET             (ERET             )
 );
 
 endmodule

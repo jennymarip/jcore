@@ -46,10 +46,7 @@ module id_stage(
     input                          ERET         ,
     input                          ES_ERET      ,
     input                          MS_ERET      ,
-    output [ 2:0]                  of_test      ,
-    // interrupt
-    input  [31:0]                  cause        ,
-    input  [31:0]                  status
+    output [ 2:0]                  of_test
 );
 
 reg         ds_valid   ;
@@ -451,10 +448,9 @@ assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez 
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
 
 // EX
-wire   interrupt;
-assign interrupt = ((cause[15:8] & status[15:8]) != 8'b0) && (status[1:0] == 2'b01);
-assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :        
-                 interrupt                        ? `INT     :
+// wire   interrupt;
+// assign interrupt = ((cause[15:8] & status[15:8]) != 8'b0) && (status[1:0] == 2'b01);
+assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :
                  (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
                  inst_syscall                     ? `SYSCALL :
                  inst_break                       ? `BREAK   :
