@@ -2,15 +2,15 @@ module sram2axi_bridge(
     input clk   ,
     input resetn,
     // inst sram interface
-    input        inst_sram_req    ,
-    input        inst_sram_wr     ,
-    input [ 1:0] inst_sram_size   ,
-    input [ 3:0] inst_sram_wstrb  ,
-    input [31:0] inst_sram_addr   ,
-    input [31:0] inst_sram_wdata  ,
-    output       inst_sram_addr_ok,
-    output       inst_sram_data_ok,
-    output       inst_sram_rdata  ,
+    input         inst_sram_req    ,
+    input         inst_sram_wr     ,
+    input [ 1:0]  inst_sram_size   ,
+    input [ 3:0]  inst_sram_wstrb  ,
+    input [31:0]  inst_sram_addr   ,
+    input [31:0]  inst_sram_wdata  ,
+    output        inst_sram_addr_ok,
+    output        inst_sram_data_ok,
+    output [31:0] inst_sram_rdata  ,
     // data sram interface
     input         data_sram_req    ,
     input         data_sram_wr     ,
@@ -64,5 +64,6 @@ module sram2axi_bridge(
     input        bvalid,
     output       bready
 );
-
+reg reset;
+always @(posedge clk) reset <= ~resetn;
 endmodule
