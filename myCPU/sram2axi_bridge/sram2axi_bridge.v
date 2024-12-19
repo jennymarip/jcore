@@ -66,4 +66,47 @@ module sram2axi_bridge(
 );
 reg reset;
 always @(posedge clk) reset <= ~resetn;
+// AR & R
+AR_R_channel ar_r_channel(
+    .clk   (clk)  ,
+    .reset (reset),
+    // inst sram interface
+    .inst_sram_req     (inst_sram_req    ),
+    .inst_sram_wr      (inst_sram_wr     ),
+    .inst_sram_size    (inst_sram_size   ),
+    .inst_sram_wstrb   (inst_sram_wstrb  ),
+    .inst_sram_addr    (inst_sram_addr   ),
+    .inst_sram_wdata   (inst_sram_wdata  ),
+    .inst_sram_addr_ok (inst_sram_addr_ok),
+    .inst_sram_data_ok (inst_sram_data_ok),
+    .inst_sram_rdata   (inst_sram_rdata  ),
+    // data sram interface
+    .data_sram_req     (data_sram_req    ),
+    .data_sram_wr      (data_sram_wr     ),
+    .data_sram_size    (data_sram_size   ),
+    .data_sram_wstrb   (data_sram_wstrb  ),
+    .data_sram_addr    (data_sram_addr   ),
+    .data_sram_wdata   (data_sram_wdata  ),
+    .data_sram_addr_ok (data_sram_addr_ok),
+    .data_sram_data_ok (data_sram_data_ok),
+    .data_sram_rdata   (data_sram_rdata  ),
+    // AR
+    .arid    (arid   ),
+    .araddr  (araddr ),
+    .arlen   (arlen  ),
+    .arsize  (arsize ),
+    .arburst (arburst),
+    .arlock  (arlock ),
+    .arcache (arcache),
+    .arprot  (arprot ),
+    .arvalid (arvalid),
+    .arready (arready),
+    // R
+    .rid    (rid   ),
+    .rdata  (rdata ),
+    .rresp  (rresp ),
+    .rlast  (rlast ),
+    .rvalid (rvalid),
+    .rready (rready)
+);
 endmodule

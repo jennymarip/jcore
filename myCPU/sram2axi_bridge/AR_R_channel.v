@@ -45,7 +45,7 @@ module AR_R_channel(
 wire   read_tran;
 assign read_tran = inst_sram_req || data_sram_req && (data_sram_wr == 1'b0);
 wire   ar_handshake;
-assign ar_handshake = (arvalid == arready);
+assign ar_handshake = (arvalid == 1'b1) && (arready ==1'b1);
 
 // AR
 assign arid    = arid_reg   ;
@@ -66,7 +66,7 @@ always @(posedge clk) begin
     if (reset || ar_handshake) begin
         arid_reg    <=  4'b0;
         araddr_reg  <= 32'b0;
-        arsize      <=  3'b0;
+        arsize_reg  <=  3'b0;
         arvalid_reg <=  1'b0;
     end else if (read_tran) begin
         arid_reg    <= data_sram_req ? 4'b1 : 4'b0;
@@ -75,20 +75,36 @@ always @(posedge clk) begin
         arvalid_reg <= 1'b1;
     end
 end
+// R
+assign rready = rready_reg;
+reg        rready_reg;
+reg [31:0] rdata_reg ; // 暂存读数据
+always @(posedge clk) begin
+    if (reset) begin
+        rready_reg <=  1'b0;
+        rdata_reg  <= 32'b0;
+    end
+    if (rvalid) begin
+        rready_reg <= 1'b1 ;
+        rdata_reg  <= rdata;
+        
+    end
+end
 // sram interface
 assign inst_sram_addr_ok = inst_sram_addr_ok_reg;
 assign data_sram_addr_ok = data_sram_addr_ok_reg;
 assign inst_sram_data_ok = inst_sram_data_ok_reg;
 assign data_sram_data_ok = data_sram_data_ok_reg;
-assign inst_sram_rdata   = inst_sram_rdata_reg;
-assign data_sram_rdata   = data_sram_rdata_reg;
-reg inst_sram_addr_ok_reg;
-reg data_sram_addr_ok_reg;
-reg inst_sram_data_ok_reg;
-reg data_sram_data_ok_reg;
-reg inst_sram_rdata_reg;
-reg data_sram_rdata_reg;
+assign inst_sram_rdata   = inst_sram_rdata_reg  ;
+assign data_sram_rdata   = data_sram_rdata_reg  ;
+reg        inst_sram_addr_ok_reg;
+reg        data_sram_addr_ok_reg;
+reg        inst_sram_data_ok_reg;
+reg        data_sram_data_ok_reg;
+reg [31:0] inst_sram_rdata_reg  ;
+reg [31:0] data_sram_rdata_reg  ;
 always @(posedge clk) begin
+    // addr_ok
     if (reset) begin
         inst_sram_addr_ok_reg <= 1'b0;
         data_sram_addr_ok_reg <= 1'b0;
@@ -98,6 +114,19 @@ always @(posedge clk) begin
     end else if (data_sram_req && data_sram_addr_ok_reg || inst_sram_req && inst_sram_addr_ok_reg) begin
         inst_sram_addr_ok_reg <= 1'b0;
         data_sram_addr_ok_reg <= 1'b0;
+    end
+end
+always @(posedge clk) begin
+    // data_ok & data
+    if (reset) begin
+        inst_sram_data_ok_reg <=  1'b0;
+        data_sram_addr_ok_reg <=  1'b0;
+        inst_sram_rdata_reg   <= 32'b0;
+        data_sram_rdata_reg   <= 32'b0;
+    end
+    else if (rvalid) begin
+        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? {1'b0, 1'b1}       : {1'b1, 1'b0}      ; 
+        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (arid == 1'b1) ? {32'b0, rdata_reg} : {rdata_reg, 32'b0};
     end
 end
 endmodule
