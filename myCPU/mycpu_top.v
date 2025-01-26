@@ -50,6 +50,7 @@ module mycpu_top(
     output [ 4:0] debug_wb_rf_wnum ,
     output [31:0] debug_wb_rf_wdata
 );
+wire        inst_sram_req  ;
 wire [ 1:0] inst_sram_size ;
 wire [31:0] inst_sram_addr ;
 wire [31:0] inst_sram_rdata;

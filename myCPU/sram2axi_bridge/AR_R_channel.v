@@ -44,8 +44,21 @@ module AR_R_channel(
 // controll
 wire   read_tran;
 assign read_tran = inst_sram_req || data_sram_req && (data_sram_wr == 1'b0);
-wire   ar_handshake;
-assign ar_handshake = (arvalid == 1'b1) && (arready ==1'b1);
+/* ar controll */
+wire   ar_handshake, ar_handshake_flag; // flag 表明存在读请求数据未返回
+reg    ar_handshake_reg;
+assign ar_handshake      = arvalid && arready;
+assign ar_handshake_flag = ar_handshake || ar_handshake_reg;
+always @(posedge clk) begin
+    if (reset || r_handshake) begin
+        ar_handshake_reg <= 1'b0;
+    end else if (ar_handshake) begin
+        ar_handshake_reg <= 1'b1;
+    end
+end
+/* r controll */
+wire   r_handshake;
+assign r_handshake = rvalid && rready; 
 
 // AR
 assign arid    = arid_reg   ;
@@ -63,7 +76,7 @@ reg [31:0] araddr_reg ;
 reg [ 2:0] arsize_reg ;
 reg        arvalid_reg;
 always @(posedge clk) begin
-    if (reset || ar_handshake) begin
+    if (reset || ar_handshake_flag) begin
         arid_reg    <=  4'b0;
         araddr_reg  <= 32'b0;
         arsize_reg  <=  3'b0;
@@ -77,7 +90,7 @@ always @(posedge clk) begin
 end
 // R
 assign rready = rready_reg;
-reg        rready_reg;
+reg    rready_reg;
 reg [31:0] rdata_reg ; // 暂存读数据
 always @(posedge clk) begin
     if (reset) begin
@@ -125,8 +138,14 @@ always @(posedge clk) begin
         data_sram_rdata_reg   <= 32'b0;
     end
     else if (rvalid) begin
-        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? {1'b0, 1'b1  } : {1'b1, 1'b0  }; 
+        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? { 1'b0,  1'b1} : { 1'b1,  1'b0}; 
         {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (arid == 1'b1) ? {32'b0, rdata} : {rdata, 32'b0};
+    end
+    if (inst_sram_data_ok) begin // data ok 信号只维持一拍
+        inst_sram_data_ok_reg <= 1'b0;
+    end
+    if (data_sram_data_ok) begin
+        data_sram_data_ok_reg <= 1'b0;
     end
 end
 endmodule
