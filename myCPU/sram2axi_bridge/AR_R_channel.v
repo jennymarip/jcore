@@ -125,8 +125,8 @@ always @(posedge clk) begin
         data_sram_rdata_reg   <= 32'b0;
     end
     else if (rvalid) begin
-        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? {1'b0, 1'b1}       : {1'b1, 1'b0}      ; 
-        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (arid == 1'b1) ? {32'b0, rdata_reg} : {rdata_reg, 32'b0};
+        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? {1'b0, 1'b1  } : {1'b1, 1'b0  }; 
+        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (arid == 1'b1) ? {32'b0, rdata} : {rdata, 32'b0};
     end
 end
 endmodule
