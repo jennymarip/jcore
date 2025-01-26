@@ -71,7 +71,7 @@ always @(posedge clk) begin
     end else if (read_tran) begin
         arid_reg    <= data_sram_req ? 4'b1 : 4'b0;
         araddr_reg  <= data_sram_req ? data_sram_addr : inst_sram_addr;
-        arsize_reg  <= data_sram_req ? data_sram_size : inst_sram_size;
+        arsize_reg  <= data_sram_req ? {1'b0, data_sram_size} : {1'b0, inst_sram_size};
         arvalid_reg <= 1'b1;
     end
 end
