@@ -96,11 +96,11 @@ always @(posedge clk) begin
     if (reset) begin
         rready_reg <=  1'b0;
         rdata_reg  <= 32'b0;
-    end
-    if (rvalid) begin
-        rready_reg <= 1'b1 ;
+    end else if (rvalid && ~r_handshake) begin
+        rready_reg <=  1'b1;
         rdata_reg  <= rdata;
-        
+    end else if (r_handshake) begin
+        rready_reg <= 1'b0;
     end
 end
 // sram interface

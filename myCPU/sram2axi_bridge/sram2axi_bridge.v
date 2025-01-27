@@ -68,7 +68,7 @@ reg reset;
 always @(posedge clk) reset <= ~resetn;
 // AR & R
 AR_R_channel ar_r_channel(
-    .clk   (clk)  ,
+    .clk   (clk  ),
     .reset (reset),
     // inst sram interface
     .inst_sram_req     (inst_sram_req    ),
@@ -108,5 +108,58 @@ AR_R_channel ar_r_channel(
     .rlast  (rlast ),
     .rvalid (rvalid),
     .rready (rready)
+);
+// AW & W
+AW_W_channel aw_w_channel(
+    .clk   (clk  ),
+    .reset (reset),
+    // data sram interface
+    .data_sram_req     (data_sram_req    ),
+    .data_sram_wr      (data_sram_wr     ),
+    .data_sram_size    (data_sram_size   ),
+    .data_sram_wstrb   (data_sram_wstrb  ),
+    .data_sram_addr    (data_sram_addr   ),
+    .data_sram_wdata   (data_sram_wdata  ),
+    .data_sram_addr_ok (data_sram_addr_ok),
+    .data_sram_data_ok (data_sram_data_ok),
+    .data_sram_rdata   (data_sram_rdata  ),
+    // AW
+    .awid    (awid   ),
+    .awaddr  (awaddr ),
+    .awlen   (awlen  ),
+    .awsize  (awsize ),
+    .awburst (awburst),
+    .awlock  (awlock ),
+    .awcache (awcache),
+    .awprot  (awprot ),
+    .awvalid (awvalid),
+    .awready (awready),
+    // W
+    .wid    (wid   ),
+    .wdata  (wdata ),
+    .wstrb  (wstrb ),
+    .wlast  (wlast ),
+    .wvalid (wvalid),
+    .wready (wready)
+);
+// B
+B_channel b_channel(
+    .clk   (clk  ),
+    .reset (reset),
+    // data sram interface
+    .data_sram_req     (data_sram_req    ),
+    .data_sram_wr      (data_sram_wr     ),
+    .data_sram_size    (data_sram_size   ),
+    .data_sram_wstrb   (data_sram_wstrb  ),
+    .data_sram_addr    (data_sram_addr   ),
+    .data_sram_wdata   (data_sram_wdata  ),
+    .data_sram_addr_ok (data_sram_addr_ok),
+    .data_sram_data_ok (data_sram_data_ok),
+    .data_sram_rdata   (data_sram_rdata  ),
+    // B
+    .bid    (bid   ),
+    .bresp  (bresp ),
+    .bvalid (bvalid),
+    .bready (bready)
 );
 endmodule
