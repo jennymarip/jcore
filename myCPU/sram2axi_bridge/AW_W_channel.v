@@ -31,5 +31,38 @@ module AW_W_channel(
     output        wvalid,
     input         wready
 );
+// controll
+wire   write_tran;
+assign write_tran = data_sram_req && data_sram_wr;
+/* aw controll */
 
+/* w controll */
+
+// AW
+assign awid    = awid_reg   ;
+assign awaddr  = awaddr_reg ;
+assign awlen   = 8'b0       ;
+assign awsize  = awsize_reg ;
+assign awburst = 2'b1       ;
+assign awlock  = 2'b0       ;
+assign awcache = 4'b0       ;
+assign awprot  = 3'b0       ;
+assign awvalid = awvalid_reg;
+
+reg [ 3:0] awid_reg   ;
+reg [31:0] awaddr_reg ;
+reg [ 2:0] awsize_reg ;
+reg        awvalid_reg;
+
+// W
+assign wid    = wid_reg   ;
+assign wdata  = wdata_reg ;
+assign wstrb  = wstrb_reg ;
+assign wlast  = 1'b1      ;
+assign wvalid = wvalid_reg;
+
+reg [ 3:0] wid_reg   ;
+reg [31:0] wdata_reg ;
+reg [ 3:0] wstrb_reg ;
+reg        wvalid_reg;
 endmodule

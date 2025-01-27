@@ -43,7 +43,7 @@ module AR_R_channel(
 );
 // controll
 wire   read_tran;
-assign read_tran = inst_sram_req || data_sram_req && (data_sram_wr == 1'b0);
+assign read_tran = inst_sram_req || data_sram_req && ~data_sram_wr;
 /* ar controll */
 wire   ar_handshake, ar_handshake_flag; // flag 表明存在读请求数据未返回
 reg    ar_handshake_reg;
