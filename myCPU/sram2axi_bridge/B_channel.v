@@ -18,4 +18,7 @@ module B_channel(
     input        bvalid,
     output       bready
 );
+assign bready = bready_reg;
+
+reg bready_reg;
 endmodule
