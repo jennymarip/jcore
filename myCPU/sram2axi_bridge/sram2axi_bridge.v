@@ -66,6 +66,9 @@ module sram2axi_bridge(
 );
 reg reset;
 always @(posedge clk) reset <= ~resetn;
+wire data_sram_data_ok_r;
+wire data_sram_data_ok_w;
+assign data_sram_data_ok = data_sram_data_ok_r || data_sram_data_ok_w;
 // AR & R
 AR_R_channel ar_r_channel(
     .clk   (clk  ),
@@ -81,15 +84,15 @@ AR_R_channel ar_r_channel(
     .inst_sram_data_ok (inst_sram_data_ok),
     .inst_sram_rdata   (inst_sram_rdata  ),
     // data sram interface
-    .data_sram_req     (data_sram_req    ),
-    .data_sram_wr      (data_sram_wr     ),
-    .data_sram_size    (data_sram_size   ),
-    .data_sram_wstrb   (data_sram_wstrb  ),
-    .data_sram_addr    (data_sram_addr   ),
-    .data_sram_wdata   (data_sram_wdata  ),
-    .data_sram_addr_ok (data_sram_addr_ok),
-    .data_sram_data_ok (data_sram_data_ok),
-    .data_sram_rdata   (data_sram_rdata  ),
+    .data_sram_req     (data_sram_req      ),
+    .data_sram_wr      (data_sram_wr       ),
+    .data_sram_size    (data_sram_size     ),
+    .data_sram_wstrb   (data_sram_wstrb    ),
+    .data_sram_addr    (data_sram_addr     ),
+    .data_sram_wdata   (data_sram_wdata    ),
+    .data_sram_addr_ok (data_sram_addr_ok  ),
+    .data_sram_data_ok (data_sram_data_ok_r),
+    .data_sram_rdata   (data_sram_rdata    ),
     // AR
     .arid    (arid   ),
     .araddr  (araddr ),
@@ -109,20 +112,19 @@ AR_R_channel ar_r_channel(
     .rvalid (rvalid),
     .rready (rready)
 );
-// AW & W
-AW_W_channel aw_w_channel(
+// AW & W & B
+AW_W_B_channel aw_w_b_channel(
     .clk   (clk  ),
     .reset (reset),
     // data sram interface
-    .data_sram_req     (data_sram_req    ),
-    .data_sram_wr      (data_sram_wr     ),
-    .data_sram_size    (data_sram_size   ),
-    .data_sram_wstrb   (data_sram_wstrb  ),
-    .data_sram_addr    (data_sram_addr   ),
-    .data_sram_wdata   (data_sram_wdata  ),
-    .data_sram_addr_ok (data_sram_addr_ok),
-    .data_sram_data_ok (data_sram_data_ok),
-    .data_sram_rdata   (data_sram_rdata  ),
+    .data_sram_req     (data_sram_req      ),
+    .data_sram_wr      (data_sram_wr       ),
+    .data_sram_size    (data_sram_size     ),
+    .data_sram_wstrb   (data_sram_wstrb    ),
+    .data_sram_addr    (data_sram_addr     ),
+    .data_sram_wdata   (data_sram_wdata    ),
+    .data_sram_addr_ok (data_sram_addr_ok  ),
+    .data_sram_data_ok (data_sram_data_ok_w),
     // AW
     .awid    (awid   ),
     .awaddr  (awaddr ),
@@ -140,22 +142,7 @@ AW_W_channel aw_w_channel(
     .wstrb  (wstrb ),
     .wlast  (wlast ),
     .wvalid (wvalid),
-    .wready (wready)
-);
-// B
-B_channel b_channel(
-    .clk   (clk  ),
-    .reset (reset),
-    // data sram interface
-    .data_sram_req     (data_sram_req    ),
-    .data_sram_wr      (data_sram_wr     ),
-    .data_sram_size    (data_sram_size   ),
-    .data_sram_wstrb   (data_sram_wstrb  ),
-    .data_sram_addr    (data_sram_addr   ),
-    .data_sram_wdata   (data_sram_wdata  ),
-    .data_sram_addr_ok (data_sram_addr_ok),
-    .data_sram_data_ok (data_sram_data_ok),
-    .data_sram_rdata   (data_sram_rdata  ),
+    .wready (wready),
     // B
     .bid    (bid   ),
     .bresp  (bresp ),
