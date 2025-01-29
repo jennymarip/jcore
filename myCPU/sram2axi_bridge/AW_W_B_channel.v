@@ -91,28 +91,34 @@ reg [ 3:0] wid_reg   ;
 reg [31:0] wdata_reg ;
 reg [ 3:0] wstrb_reg ;
 reg        wvalid_reg;
+/* aw */
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset || aw_handshake_flag) begin
         awid_reg    <=  4'b0;
         awaddr_reg  <= 32'b0;
         awsize_reg  <=  3'b0;
         awvalid_reg <=  1'b0;
-        wid_reg     <=  4'b0;
-        wdata_reg   <= 32'b0;
-        wstrb_reg   <=  4'b0;
-        wvalid_reg  <=  1'b0;
     end else if (write_tran) begin
         awid_reg    <= 1'b1;
         awaddr_reg  <= data_sram_addr;
         awsize_reg  <= {1'b0, data_sram_size};
         awvalid_reg <= 1'b1;
+    end
+end
+/* w */
+always @(posedge clk) begin
+    if (reset || w_handshake_flag) begin
+        wid_reg     <=  4'b0;
+        wdata_reg   <= 32'b0;
+        wstrb_reg   <=  4'b0;
+        wvalid_reg  <=  1'b0;
+    end else if (write_tran) begin
         wid_reg     <= 1'b1;
         wdata_reg   <= data_sram_wdata;
         wstrb_reg   <= data_sram_wstrb;
         wvalid_reg  <= 1'b1;
     end
 end
-
 // B
 assign bready = bready_reg;
 reg bready_reg;
@@ -136,10 +142,8 @@ always @(posedge clk) begin
     // addr_ok
     if (reset) begin
         data_sram_addr_ok_reg <= 1'b0;
-    end else if (aw_handshake_flag && w_handshake_flag) begin
+    end else if (aw_handshake && w_handshake_flag || aw_handshake_flag && w_handshake) begin
         data_sram_addr_ok_reg <= 1'b1;
-    end else if (data_sram_req && data_sram_addr_ok_reg) begin
-        data_sram_addr_ok_reg <= 1'b0;
     end else begin
         data_sram_addr_ok_reg <= 1'b0;
     end

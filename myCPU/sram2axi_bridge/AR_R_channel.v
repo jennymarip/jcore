@@ -71,6 +71,10 @@ assign arcache = 4'b0       ;
 assign arprot  = 3'b0       ;
 assign arvalid = arvalid_reg;
 
+/* read_data信号区分当 data_sram_req 有效时，是读数据还是写数据 */
+wire   read_data;
+assign read_data = data_sram_req && ~data_sram_wr;
+
 reg [ 3:0] arid_reg   ;
 reg [31:0] araddr_reg ;
 reg [ 2:0] arsize_reg ;
@@ -81,10 +85,10 @@ always @(posedge clk) begin
         araddr_reg  <= 32'b0;
         arsize_reg  <=  3'b0;
         arvalid_reg <=  1'b0;
-    end else if (read_tran) begin
-        arid_reg    <= data_sram_req ? 4'b1 : 4'b0;
-        araddr_reg  <= data_sram_req ? data_sram_addr : inst_sram_addr;
-        arsize_reg  <= data_sram_req ? {1'b0, data_sram_size} : {1'b0, inst_sram_size};
+    end else if (read_tran) begin // 两种情况，读数据，读指令
+        arid_reg    <= read_data ? 4'b1 : 4'b0;
+        araddr_reg  <= read_data ? data_sram_addr : inst_sram_addr;
+        arsize_reg  <= read_data ? {1'b0, data_sram_size} : {1'b0, inst_sram_size};
         arvalid_reg <= 1'b1;
     end
 end
@@ -122,8 +126,8 @@ always @(posedge clk) begin
         inst_sram_addr_ok_reg <= 1'b0;
         data_sram_addr_ok_reg <= 1'b0;
     end else if (ar_handshake) begin
-        inst_sram_addr_ok_reg <= data_sram_req ? 1'b0 : 1'b1;
-        data_sram_addr_ok_reg <= data_sram_req ? 1'b1 : 1'b0;
+        inst_sram_addr_ok_reg <= arid ? 1'b0 : 1'b1;
+        data_sram_addr_ok_reg <= arid ? 1'b1 : 1'b0;
     end else if (data_sram_req && data_sram_addr_ok_reg || inst_sram_req && inst_sram_addr_ok_reg) begin
         inst_sram_addr_ok_reg <= 1'b0;
         data_sram_addr_ok_reg <= 1'b0;
@@ -133,7 +137,7 @@ always @(posedge clk) begin
     // data_ok & data
     if (reset) begin
         inst_sram_data_ok_reg <=  1'b0;
-        data_sram_addr_ok_reg <=  1'b0;
+        data_sram_data_ok_reg <=  1'b0;
         inst_sram_rdata_reg   <= 32'b0;
         data_sram_rdata_reg   <= 32'b0;
     end

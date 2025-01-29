@@ -58,6 +58,7 @@ wire [ 1:0] data_sram_size ;
 wire [ 3:0] data_sram_wstrb;
 wire [31:0] data_sram_addr ;
 wire [31:0] data_sram_wdata;
+wire [31:0] data_sram_rdata;
 mycpu_sram cpu_core(
     .clk    (aclk   ),
     .resetn (aresetn),
