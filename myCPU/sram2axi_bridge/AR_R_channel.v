@@ -140,10 +140,9 @@ always @(posedge clk) begin
         data_sram_data_ok_reg <=  1'b0;
         inst_sram_rdata_reg   <= 32'b0;
         data_sram_rdata_reg   <= 32'b0;
-    end
-    else if (rvalid) begin
-        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (arid == 1'b1) ? { 1'b0,  1'b1} : { 1'b1,  1'b0}; 
-        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (arid == 1'b1) ? {32'b0, rdata} : {rdata, 32'b0};
+    end else if (rvalid) begin
+        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= rid ? { 1'b0,  1'b1} : { 1'b1,  1'b0}; 
+        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= rid ? {32'b0, rdata} : {rdata, 32'b0};
     end
     if (inst_sram_data_ok) begin // data ok 信号只维持一拍
         inst_sram_data_ok_reg <= 1'b0;
