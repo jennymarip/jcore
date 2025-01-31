@@ -85,7 +85,7 @@ always @(posedge clk) begin
         araddr_reg  <= 32'b0;
         arsize_reg  <=  3'b0;
         arvalid_reg <=  1'b0;
-    end else if (read_tran) begin // 两种情况，读数据，读指令
+    end else if (read_tran && ~arvalid) begin // 两种情况，读数据，读指令
         arid_reg    <= read_data ? 4'b1 : 4'b0;
         araddr_reg  <= read_data ? data_sram_addr : inst_sram_addr;
         arsize_reg  <= read_data ? {1'b0, data_sram_size} : {1'b0, inst_sram_size};
