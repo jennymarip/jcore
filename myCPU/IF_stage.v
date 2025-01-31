@@ -11,15 +11,16 @@ module if_stage(
     output                         fs_to_ds_valid   ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus     ,
     // inst sram interface
-    output                         inst_sram_en     ,
-    output                         inst_sram_wr     ,
-    output [ 1:0]                  inst_sram_size   ,
-    output [ 3:0]                  inst_sram_wen    ,
-    output [31:0]                  inst_sram_addr   ,
-    output [31:0]                  inst_sram_wdata  ,
-    input                          inst_sram_addr_ok,
-    input                          inst_sram_data_ok,
-    input  [31:0]                  inst_sram_rdata  ,
+    output                    inst_sram_en          ,
+    output                    inst_sram_wr          ,
+    output [ 1:0]             inst_sram_size        ,
+    output [ 3:0]             inst_sram_wen         ,
+    output [31:0]             inst_sram_addr        ,
+    output [31:0]             inst_sram_wdata       ,
+    input                     inst_sram_addr_ok     ,
+    input  [31:0]             inst_sram_addr_ok_addr,
+    input                     inst_sram_data_ok     ,
+    input  [31:0]             inst_sram_rdata       ,
     // EX (ex_word[DS, ES, MS, WS])
     input                          ERET             ,
     input  [31:0]                  cp0_epc          ,
@@ -92,12 +93,13 @@ always @(posedge clk) begin
         br_taken_reg  <=  1'b0    ;
     end
 end
-// quit a data_ok : 当WB阶段处于异常，但是已经有部分指令地址握手了，那么有可能接下来返回的dataok是无效的，应该被丢弃
+// 处理异常场景下的一些情况
+/* quit a data_ok : 当WB阶段处于异常，但是已经有部分指令地址握手了，那么有可能接下来返回的dataok是无效的，应该被丢弃 */
 wire quit_a_data_ok, quit_a_data_ok_flag;
 reg  quit_a_data_ok_reg;
 assign quit_a_data_ok_flag = quit_a_data_ok || quit_a_data_ok_reg;
 assign quit_a_data_ok      = WS_EX && 
-                             (fs_valid && ~inst_ready_reg || (to_fs_valid && ~(inst_sram_en && inst_sram_addr_ok)));
+                             (fs_valid && ~inst_ready_reg || (to_fs_valid && ~(inst_sram_en && inst_sram_addr_ok && addr_ok_valid)));
 always @ (posedge clk) begin
     if (reset) begin
         quit_a_data_ok_reg <= 1'b0;
@@ -109,6 +111,10 @@ always @ (posedge clk) begin
         quit_a_data_ok_reg <= 1'b0;
     end
 end
+/* addr_ok_valid : 从转接桥返回的 addr_ok 对应的指令可能并不是 pre_fs 阶段的指令 */
+wire   addr_ok_valid;
+assign addr_ok_valid = (inst_sram_addr == inst_sram_addr_ok_addr);
+
 // EX unit
 wire        WS_EX    ;
 reg         WS_EX_reg;
@@ -153,7 +159,7 @@ assign nextpc       = WS_EX || WS_EX_reg ? 32'hbfc00380                         
                       is_slot_reg        ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
                                             seq_pc;
 
-assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok);
+assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok && addr_ok_valid);
 always@ (posedge clk) begin
     if (reset) begin
         pre_fs_ready_go_reg <= 1'b0;
@@ -222,21 +228,18 @@ always@(posedge clk) begin
         inst_sram_en_reg <= inst_sram_req;
     end
     // else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
-    else if (inst_sram_addr_ok) begin
+    else if (inst_sram_addr_ok && addr_ok_valid) begin
         inst_sram_en_reg <= 1'b0         ;
-    end
-    else if (branch_in_fs ? ~pre_fs_ready_go_flag : fs_allowin) begin
+    end else if (branch_in_fs ? ~pre_fs_ready_go_flag : fs_allowin) begin
         inst_sram_en_reg <= inst_sram_req;
     end
 end
 always @(posedge clk) begin
     if (reset) begin
         inst_ready_reg <= 1'b0;
-    end
-    else if (inst_sram_data_ok && ~quit_a_data_ok_flag) begin
+    end else if (inst_sram_data_ok && ~quit_a_data_ok_flag) begin
         inst_ready_reg <= 1'b1;
-    end
-    else if (inst_sram_addr_ok && inst_sram_en) begin
+    end else if (inst_sram_addr_ok && addr_ok_valid && inst_sram_en) begin
         inst_ready_reg <= 1'b0;
     end
 end

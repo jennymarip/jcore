@@ -3,15 +3,16 @@ module AR_R_channel(
     input clk  ,
     input reset,
     // inst sram interface
-    input         inst_sram_req    ,
-    input         inst_sram_wr     ,
-    input [ 1:0]  inst_sram_size   ,
-    input [ 3:0]  inst_sram_wstrb  ,
-    input [31:0]  inst_sram_addr   ,
-    input [31:0]  inst_sram_wdata  ,
-    output        inst_sram_addr_ok,
-    output        inst_sram_data_ok,
-    output [31:0] inst_sram_rdata  ,
+    input         inst_sram_req         ,
+    input         inst_sram_wr          ,
+    input [ 1:0]  inst_sram_size        ,
+    input [ 3:0]  inst_sram_wstrb       ,
+    input [31:0]  inst_sram_addr        ,
+    input [31:0]  inst_sram_wdata       ,
+    output [31:0] inst_sram_addr_ok_addr,
+    output        inst_sram_addr_ok     ,
+    output        inst_sram_data_ok     ,
+    output [31:0] inst_sram_rdata       ,
     // data sram interface
     input         data_sram_req    ,
     input         data_sram_wr     ,
@@ -108,29 +109,34 @@ always @(posedge clk) begin
     end
 end
 // sram interface
-assign inst_sram_addr_ok = inst_sram_addr_ok_reg;
-assign data_sram_addr_ok = data_sram_addr_ok_reg;
-assign inst_sram_data_ok = inst_sram_data_ok_reg;
-assign data_sram_data_ok = data_sram_data_ok_reg;
-assign inst_sram_rdata   = inst_sram_rdata_reg  ;
-assign data_sram_rdata   = data_sram_rdata_reg  ;
-reg        inst_sram_addr_ok_reg;
-reg        data_sram_addr_ok_reg;
-reg        inst_sram_data_ok_reg;
-reg        data_sram_data_ok_reg;
-reg [31:0] inst_sram_rdata_reg  ;
-reg [31:0] data_sram_rdata_reg  ;
+assign inst_sram_addr_ok      = inst_sram_addr_ok_reg     ;
+assign inst_sram_addr_ok_addr = inst_sram_addr_ok_addr_reg;
+assign data_sram_addr_ok      = data_sram_addr_ok_reg     ;
+assign inst_sram_data_ok      = inst_sram_data_ok_reg     ;
+assign data_sram_data_ok      = data_sram_data_ok_reg     ;
+assign inst_sram_rdata        = inst_sram_rdata_reg       ;
+assign data_sram_rdata        = data_sram_rdata_reg       ;
+reg        inst_sram_addr_ok_reg     ;
+reg [31:0] inst_sram_addr_ok_addr_reg;
+reg        data_sram_addr_ok_reg     ;
+reg        inst_sram_data_ok_reg     ;
+reg        data_sram_data_ok_reg     ;
+reg [31:0] inst_sram_rdata_reg       ;
+reg [31:0] data_sram_rdata_reg       ;
 always @(posedge clk) begin
     // addr_ok
     if (reset) begin
-        inst_sram_addr_ok_reg <= 1'b0;
-        data_sram_addr_ok_reg <= 1'b0;
+        inst_sram_addr_ok_reg      <=  1'b0;
+        inst_sram_addr_ok_addr_reg <= 32'b0;
+        data_sram_addr_ok_reg      <=  1'b0;
     end else if (ar_handshake) begin
-        inst_sram_addr_ok_reg <= arid ? 1'b0 : 1'b1;
-        data_sram_addr_ok_reg <= arid ? 1'b1 : 1'b0;
+        inst_sram_addr_ok_reg      <= arid ?  1'b0 : 1'b1;
+        data_sram_addr_ok_reg      <= arid ?  1'b1 : 1'b0;
+        inst_sram_addr_ok_addr_reg <= arid ? 32'b0 : inst_sram_addr;
     end else if (data_sram_req && data_sram_addr_ok_reg || inst_sram_req && inst_sram_addr_ok_reg) begin
-        inst_sram_addr_ok_reg <= 1'b0;
-        data_sram_addr_ok_reg <= 1'b0;
+        inst_sram_addr_ok_reg      <=  1'b0;
+        data_sram_addr_ok_reg      <=  1'b0;
+        inst_sram_addr_ok_addr_reg <= 32'b0;
     end
 end
 always @(posedge clk) begin

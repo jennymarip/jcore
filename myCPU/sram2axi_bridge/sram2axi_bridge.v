@@ -2,15 +2,16 @@ module sram2axi_bridge(
     input clk   ,
     input resetn,
     // inst sram interface
-    input         inst_sram_req    ,
-    input         inst_sram_wr     ,
-    input [ 1:0]  inst_sram_size   ,
-    input [ 3:0]  inst_sram_wstrb  ,
-    input [31:0]  inst_sram_addr   ,
-    input [31:0]  inst_sram_wdata  ,
-    output        inst_sram_addr_ok,
-    output        inst_sram_data_ok,
-    output [31:0] inst_sram_rdata  ,
+    input         inst_sram_req         , 
+    input         inst_sram_wr          ,
+    input [ 1:0]  inst_sram_size        ,
+    input [ 3:0]  inst_sram_wstrb       ,
+    input [31:0]  inst_sram_addr        ,
+    input [31:0]  inst_sram_wdata       ,
+    output [31:0] inst_sram_addr_ok_addr,
+    output        inst_sram_addr_ok     ,
+    output        inst_sram_data_ok     ,
+    output [31:0] inst_sram_rdata       ,
     // data sram interface
     input         data_sram_req    ,
     input         data_sram_wr     ,
@@ -72,20 +73,22 @@ wire data_sram_addr_ok_r;
 wire data_sram_addr_ok_w;
 assign data_sram_data_ok = data_sram_data_ok_r || data_sram_data_ok_w;
 assign data_sram_addr_ok = data_sram_addr_ok_r || data_sram_addr_ok_w;
+wire [31:0] inst_sram_addr_ok_addr;
 // AR & R
 AR_R_channel ar_r_channel(
     .clk   (clk  ),
     .reset (reset),
     // inst sram interface
-    .inst_sram_req     (inst_sram_req    ),
-    .inst_sram_wr      (inst_sram_wr     ),
-    .inst_sram_size    (inst_sram_size   ),
-    .inst_sram_wstrb   (inst_sram_wstrb  ),
-    .inst_sram_addr    (inst_sram_addr   ),
-    .inst_sram_wdata   (inst_sram_wdata  ),
-    .inst_sram_addr_ok (inst_sram_addr_ok),
-    .inst_sram_data_ok (inst_sram_data_ok),
-    .inst_sram_rdata   (inst_sram_rdata  ),
+    .inst_sram_req          (inst_sram_req         ),
+    .inst_sram_wr           (inst_sram_wr          ),
+    .inst_sram_size         (inst_sram_size        ),
+    .inst_sram_wstrb        (inst_sram_wstrb       ),
+    .inst_sram_addr         (inst_sram_addr        ),
+    .inst_sram_wdata        (inst_sram_wdata       ),
+    .inst_sram_addr_ok_addr (inst_sram_addr_ok_addr),
+    .inst_sram_addr_ok      (inst_sram_addr_ok     ),
+    .inst_sram_data_ok      (inst_sram_data_ok     ),
+    .inst_sram_rdata        (inst_sram_rdata       ),
     // data sram interface
     .data_sram_req     (data_sram_req      ),
     .data_sram_wr      (data_sram_wr       ),
