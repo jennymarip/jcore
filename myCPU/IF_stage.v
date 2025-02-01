@@ -103,11 +103,9 @@ assign quit_a_data_ok      = WS_EX &&
 always @ (posedge clk) begin
     if (reset) begin
         quit_a_data_ok_reg <= 1'b0;
-    end
-    else if (quit_a_data_ok && ~inst_sram_data_ok) begin
+    end else if (quit_a_data_ok && ~inst_sram_data_ok || inst_sram_addr_ok && ~addr_ok_valid) begin
         quit_a_data_ok_reg <= 1'b1;
-    end
-    else if (quit_a_data_ok_reg && inst_sram_data_ok) begin
+    end else if (quit_a_data_ok_reg && inst_sram_data_ok) begin
         quit_a_data_ok_reg <= 1'b0;
     end
 end
@@ -226,9 +224,7 @@ reg    inst_sram_en_reg, inst_ready_reg;
 always@(posedge clk) begin
     if (reset) begin
         inst_sram_en_reg <= inst_sram_req;
-    end
-    // else if (inst_sram_addr_ok & ~inst_sram_data_ok) begin
-    else if (inst_sram_addr_ok && addr_ok_valid) begin
+    end else if (inst_sram_addr_ok && addr_ok_valid) begin
         inst_sram_en_reg <= 1'b0         ;
     end else if (branch_in_fs ? ~pre_fs_ready_go_flag : fs_allowin) begin
         inst_sram_en_reg <= inst_sram_req;
@@ -244,11 +240,11 @@ always @(posedge clk) begin
     end
 end
 
-assign inst_sram_en    = inst_sram_en_reg    ;
-assign inst_sram_wr    = 1'b0                ;
-assign inst_sram_size  = 2'b10               ;
-assign inst_sram_wen   = 4'h0                ;
-assign inst_sram_addr  = {nextpc[31:2], 2'b0};
-assign inst_sram_wdata = 32'b0               ;
+assign inst_sram_en    = inst_sram_en_reg;
+assign inst_sram_wr    = 1'b0            ;
+assign inst_sram_size  = 2'b10           ;
+assign inst_sram_wen   = 4'h0            ;
+assign inst_sram_addr  = nextpc          ;
+assign inst_sram_wdata = 32'b0           ;
 
 endmodule
