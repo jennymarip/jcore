@@ -130,9 +130,9 @@ always @(posedge clk) begin
         inst_sram_addr_ok_addr_reg <= 32'b0;
         data_sram_addr_ok_reg      <=  1'b0;
     end else if (ar_handshake) begin
-        inst_sram_addr_ok_reg      <= arid ?  1'b0 : 1'b1;
-        data_sram_addr_ok_reg      <= arid ?  1'b1 : 1'b0;
-        inst_sram_addr_ok_addr_reg <= arid ? 32'b0 : inst_sram_addr;
+        inst_sram_addr_ok_reg      <= arid ?  1'b0 :   1'b1;
+        data_sram_addr_ok_reg      <= arid ?  1'b1 :   1'b0;
+        inst_sram_addr_ok_addr_reg <= arid ? 32'b0 : araddr;
     end else if (data_sram_req && data_sram_addr_ok_reg || inst_sram_req && inst_sram_addr_ok_reg) begin
         inst_sram_addr_ok_reg      <=  1'b0;
         data_sram_addr_ok_reg      <=  1'b0;
