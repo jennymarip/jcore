@@ -114,7 +114,7 @@ wire [31:0] cp0_wdata;
 
 assign cp0_epc    = eret ? cp0_rdata : 32'b0;
 assign cp0_raddr = ws_inst_mfc0 ? rd       :
-                   eret         ? `CP0_EPC :
+                   eret         ? `CP0_EPC : 
                                   5'b11111;
 assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
 assign cp0_wdata = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
