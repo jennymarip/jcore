@@ -18,6 +18,10 @@
     `define CP0_BadVAddr    5'b1000
     `define CP0_COUNT       5'b1001
     `define CP0_COMPARE     5'b1011
+    `define CP0_INDEX       5'b0000
+    `define CP0_EnrtyLo0    5'b0010
+    `define CP0_EnrtyLo1    5'b0011
+    `define CP0_EnrtyHi     5'b1010
 
     `define SYSCALL         5'b01000
     `define BREAK           5'b01001
