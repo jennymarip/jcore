@@ -295,5 +295,8 @@ assign rdata = (raddr == `CP0_EPC     ) ? cp0_epc      :
                (raddr == `CP0_COUNT   ) ? cp0_count    :
                (raddr == `CP0_COMPARE ) ? cp0_compare  :
                (raddr == `CP0_INDEX   ) ? cp0_index    :
+               (raddr == `CP0_EnrtyHi ) ? cp0_EnrtyHi  :
+               (raddr == `CP0_EnrtyLo0) ? cp0_EnrtyLo0 :
+               (raddr == `CP0_EnrtyLo1) ? cp0_EnrtyLo1 :
                32'b0;
 endmodule
