@@ -46,7 +46,11 @@ module exe_stage(
     input         ERET          ,
     input         MS_ERET       ,
     output        ES_ERET       ,
-    input  [ 2:0] of_test       // single hot
+    input  [ 2:0] of_test       ,// single hot
+    // tlb p
+    output        es_inst_tlbp,
+    input         ms_inst_mtc0,
+    input         ws_inst_mtc0
 ); 
 
 reg         es_valid      ;
@@ -97,6 +101,12 @@ wire        pc_error           ;
 wire        es_inst_mtc0       ;
 wire        es_inst_mfc0       ;
 wire        mem_access         ;
+
+assign {es_inst_tlbp,
+        es_inst_mfc0,
+        es_inst_mtc0,
+        pc_error
+       } = ds_to_es_bus_r[186:183];
 assign {eret               ,  //145:145
         slot               ,  //144:144
         rd                 ,  //143:139
@@ -146,7 +156,9 @@ assign inst_mfc0 = es_inst_mfc0;
 reg [ 2:0] OF_TEST;
 
 assign es_ready_go    = data_sram_req ? ((data_sram_en && data_sram_addr_ok) || data_sram_en_and_ok) : 
-                                        (~div_unfinished | ES_EX | MS_EX | WS_EX);
+                                        (~div_unfinished | ES_EX | MS_EX | WS_EX) && 
+                                        ~(es_inst_tlbp && ms_inst_mtc0)           &&
+                                        ~(es_inst_tlbp && ws_inst_mtc0);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -380,9 +392,7 @@ assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (sh & LDB[0]);
 assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
                                    (BadAddr_R | BadAddr_W) ? data_sram_addr          :
                                                              32'b0;
-assign      pc_error     = ds_to_es_bus_r[183];
-assign      es_inst_mtc0 = ds_to_es_bus_r[184];
-assign      es_inst_mfc0 = ds_to_es_bus_r[185];
+
 // R / W
 wire [31:0]  st_data;
 assign st_data = sb ? {4{es_rt_value[ 7:0]}} :

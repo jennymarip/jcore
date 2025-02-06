@@ -23,7 +23,13 @@ module wb_stage(
     // EX
     output        WS_EX           ,
     output [31:0] cp0_epc         ,
-    output        ERET
+    output        ERET            ,
+    // tlbp
+    input         es_inst_tlbp    ,
+    input         s1_found        ,
+    input         s1_index        ,
+    output [31:0] cp0_EntryHi     ,
+    output        inst_mtc0
 );
 
 reg         ws_valid;
@@ -113,11 +119,14 @@ wire [ 4:0] cp0_waddr;
 wire [31:0] cp0_wdata;
 
 assign cp0_epc    = eret ? cp0_rdata : 32'b0;
-assign cp0_raddr = ws_inst_mfc0 ? rd       :
-                   eret         ? `CP0_EPC : 
+assign cp0_raddr = ws_inst_mfc0 ? rd           :
+                   eret         ? `CP0_EPC     :
+                   es_inst_tlbp ? `CP0_EnrtyHi :
                                   5'b11111;
-assign cp0_waddr = WS_EX ? `CP0_EPC :  5'b11111;
-assign cp0_wdata = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
+assign cp0_EntryHi = cp0_rdata;
+assign inst_mtc0 = ws_inst_mtc0 && ws_valid;
+assign cp0_waddr   = WS_EX ? `CP0_EPC :  5'b11111;
+assign cp0_wdata   = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
 
 // CP0
 CP0 CP0(
@@ -141,6 +150,10 @@ CP0 CP0(
     .mtc0_waddr (ws_dest         ),
     // interrupt generate
     .cause      (cause        ),
-    .status     (status       )
+    .status     (status       ),
+    // tlbp
+    .es_inst_tlbp (es_inst_tlbp),
+    .s1_found     (s1_found    ),
+    .s1_index     (s1_index    )
     );
 endmodule

@@ -20,7 +20,11 @@ module CP0(
     input  [ 4:0] mtc0_waddr,
     // interrupt generate
     output [31:0] cause     ,
-    output [31:0] status
+    output [31:0] status    ,
+    // tlbp
+    input         es_inst_tlbp,
+    input         s1_found    ,
+    input         s1_index
 );
 wire   ex                          ;
 assign ex     = (ex_code != `NO_EX);
@@ -165,6 +169,10 @@ reg cp0_index_p;
 always @ (posedge clk) begin
     if (reset) begin
         cp0_index_p <= 1'b0;
+    end else if (es_inst_tlbp && s1_found) begin
+        cp0_index_p <= 1'b0;
+    end else if (es_inst_tlbp && ~s1_found) begin
+        cp0_index_p <= 1'b1;
     end
 end
 reg [ 3:0] cp0_index_index;
@@ -173,6 +181,8 @@ always @ (posedge clk) begin
         cp0_index_index <= 4'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_INDEX)) begin
         cp0_index_index <= mtc0_wdata[3:0];
+    end else if (es_inst_tlbp && s1_found) begin
+        cp0_index_index <= s1_index;
     end
 end
 assign cp0_index = {cp0_index_p, 26'b0, cp0_index_index};

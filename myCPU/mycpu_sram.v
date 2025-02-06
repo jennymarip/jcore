@@ -155,6 +155,11 @@ wire [`LD_WORD_LEN-1:0] ld_word_;
 wire [31:0] rt_value      ;
 wire        MS_EX         ;
 wire        MS_ERET       ;
+wire        es_inst_tlbp  ;
+wire [31:0] cp0_EntryHi   ;
+wire        ws_inst_mtc0  ;
+wire        ms_inst_mtc0  ;
+
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -202,7 +207,11 @@ exe_stage exe_stage(
     .ERET           (ERET           ),
     .MS_ERET        (MS_ERET        ),
     .ES_ERET        (ES_ERET        ),
-    .of_test        (of_test        )
+    .of_test        (of_test        ),
+    // tlbp
+    .es_inst_tlbp   (es_inst_tlbp   ),
+    .ms_inst_mtc0   (ms_inst_mtc0   ),
+    .ws_inst_mtc0   (ws_inst_mtc0   )
 );
 // MEM stage
 mem_stage mem_stage(
@@ -222,6 +231,7 @@ mem_stage mem_stage(
     .data_sram_rdata  (data_sram_rdata  ),
     //data dependence
     .inst_mfc0      (ms_inst_mfc0   ),
+    .inst_mtc0      (ms_inst_mtc0   ),
     .MEM_dest       (MEM_dest       ),
     //forward
     .MEM_dest_data  (MEM_dest_data  ),
@@ -261,7 +271,70 @@ wb_stage wb_stage(
     // EX
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
-    .ERET             (ERET             )
+    .ERET             (ERET             ),
+    // tlbp
+    .es_inst_tlbp     (es_inst_tlbp     ),
+    .s1_found         (s1_found         ),
+    .s1_index         (s1_index         ),
+    .cp0_EntryHi      (cp0_EntryHi      ),
+    .inst_mtc0        (ws_inst_mtc0     )
+);
+wire [18:0] s1_vpn2;
+wire [ 7:0] s1_asid;
+wire s1_found, s1_index;
+assign s1_vpn2 = cp0_EntryHi[31:13];
+assign s1_asid = cp0_EntryHi[ 7: 0];
+// tlb
+tlb #(.TLBNUM(16)) tlb
+(
+    .clk (clk),
+    // search port 0
+    .s0_vpn2     (s0_vpn2    ),
+    .s0_odd_page (s0_odd_page),
+    .s0_asid     (s0_asid    ),
+    .s0_found    (s0_found   ),
+    .s0_index    (s0_index   ),
+    .s0_pfn      (s0_pfn     ),
+    .s0_c        (s0_c       ),
+    .s0_d        (s0_d       ),
+    .s0_v        (s0_v       ),
+    // search port 1
+    .s1_vpn2     (s1_vpn2    ),
+    .s1_odd_page (s1_odd_page),
+    .s1_asid     (s1_asid    ),
+    .s1_found    (s1_found   ),
+    .s1_index    (s1_index   ),
+    .s1_pfn      (s1_pfn     ),
+    .s1_c        (s1_c       ),
+    .s1_d        (s1_d       ),
+    .s1_v        (s1_v       ),
+    // write port
+    .we      (we     ),
+    .w_index (w_index),
+    .w_vpn2  (w_vpn2 ),
+    .w_asid  (w_asid ),
+    .w_g     (w_g    ),
+    .w_pfn0  (w_pfn0 ),
+    .w_c0    (w_c0   ),
+    .w_d0    (w_d0   ),
+    .w_v0    (w_v0   ),
+    .w_pfn1  (w_pfn1 ),
+    .w_c1    (w_c1   ),
+    .w_d1    (w_d1   ),
+    .w_v1    (w_v1   ),
+    // read port
+    .r_index (r_index),
+    .r_vpn2  (r_vpn2 ),
+    .r_asid  (r_asid ),
+    .r_g     (r_g    ),
+    .r_pfn0  (r_pfn0 ),
+    .r_c0    (r_c0   ),
+    .r_d0    (r_d0   ),
+    .r_v0    (r_v0   ),
+    .r_pfn1  (r_pfn1 ),
+    .r_c1    (r_c1   ),
+    .r_d1    (r_d1   ),
+    .r_v1    (r_v1   )
 );
 
 endmodule

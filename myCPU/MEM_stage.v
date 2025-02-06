@@ -17,6 +17,7 @@ module mem_stage(
     input  [31:0]                  data_sram_rdata  ,
     //to ds data dependence
     output                         inst_mfc0     ,
+    output                         inst_mtc0     ,
     output [ 4:0]                  MEM_dest      ,
     //forward
     output [31:0]                  MEM_dest_data ,
@@ -96,6 +97,7 @@ wire [31:0] ms_final_result;
 
 assign MEM_dest  = ms_dest & {5{ms_valid}};
 assign inst_mfc0 = ms_inst_mfc0;
+assign inst_mtc0 = ms_inst_mtc0 && ms_valid;
 
 assign ms_to_ws_bus = {rd             ,  //116:112
                        ms_inst_mfc0   ,  //111:111

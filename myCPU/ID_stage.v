@@ -183,6 +183,7 @@ wire        inst_break;
 wire        inst_mtc0;
 wire        inst_mfc0;
 wire        inst_eret;
+wire        inst_tlbp;
 wire        inst_no;
 wire        not_in_alu;
 
@@ -205,7 +206,8 @@ wire        eret   ;
 
 assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {inst_mfc0       ,  //185:185
+assign ds_to_es_bus = {inst_tlbp       ,  //186:186
+                       inst_mfc0       ,  //185:185
                        inst_mtc0       ,  //184:184
                        pc_error        ,  //183:183
                        BadVAddr        ,  //182:151
@@ -341,6 +343,7 @@ assign inst_break  = op_d[6'h00] & func_d[6'h0d]; // 1
 assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_eret   = (ds_inst[31:0] == 32'h42000018); // 1
+assign inst_tlbp   = {ds_inst[31:0] == 32'h42000008};
 
 assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz |
                      inst_jr  |
@@ -448,8 +451,6 @@ assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez 
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
 
 // EX
-// wire   interrupt;
-// assign interrupt = ((cause[15:8] & status[15:8]) != 8'b0) && (status[1:0] == 2'b01);
 assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :
                  (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
                  inst_syscall                     ? `SYSCALL :
