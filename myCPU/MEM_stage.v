@@ -56,17 +56,19 @@ wire        ms_res_from_mem;
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
-wire [31:0] ms_pc       ;
-wire        slot        ;
-wire        eret        ;
-wire [ 4:0] ex_code     ;
-wire [31:0] BadVAddr    ;
-wire        pc_error    ;
-wire        mem_access  ;
-wire        ms_inst_mtc0;
-wire        ms_inst_mfc0;
-wire [ 4:0] rd          ;
-assign {rd             ,  //118:114
+wire [31:0] ms_pc        ;
+wire        slot         ;
+wire        eret         ;
+wire [ 4:0] ex_code      ;
+wire [31:0] BadVAddr     ;
+wire        pc_error     ;
+wire        mem_access   ;
+wire        ms_inst_mtc0 ;
+wire        ms_inst_mfc0 ;
+wire        ms_inst_tlbwi;
+wire [ 4:0] rd           ;
+assign {rd             ,  //119:115
+        ms_inst_tlbwi  ,  //114:114
         ms_inst_mfc0   ,  //113:113
         ms_inst_mtc0   ,  //112:112
         mem_access     ,  //111:111
@@ -99,7 +101,8 @@ assign MEM_dest  = ms_dest & {5{ms_valid}};
 assign inst_mfc0 = ms_inst_mfc0;
 assign inst_mtc0 = ms_inst_mtc0 && ms_valid;
 
-assign ms_to_ws_bus = {rd             ,  //116:112
+assign ms_to_ws_bus = {rd             ,  //117:113
+                       ms_inst_tlbwi  ,  //112:112
                        ms_inst_mfc0   ,  //111:111
                        ms_inst_mtc0   ,  //110:110
                        pc_error       ,  //109:109

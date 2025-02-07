@@ -24,8 +24,34 @@ module CP0(
     // tlbp
     input         es_inst_tlbp,
     input         s1_found    ,
-    input         s1_index
+    input         s1_index    ,
+    output [ 3:0] index       ,
+    output [18:0] vpn2        ,
+    output [ 7:0] asid        ,
+    output        g           ,
+    output [19:0] pfn0        ,
+    output [ 2:0] c0          ,
+    output        d0          ,
+    output        v0          ,
+    output [19:0] pfn1        ,
+    output [ 2:0] c1          ,
+    output        d1          ,
+    output        v1
+
 );
+assign index = cp0_index_index  ;
+assign vpn2  = cp0_EnrtyHi_VPN2 ;
+assign asid  = cp0_EnrtyHi_ASID ;
+assign g     = cp0_EnrtyLo1_G1 && cp0_EnrtyLo0_G0;
+assign pfn0  = cp0_EnrtyLo0_PFN0;
+assign c0    = cp0_EnrtyLo0_C0  ;
+assign d0    = cp0_EnrtyLo0_D0  ;
+assign v0    = cp0_EnrtyLo0_V0  ;
+assign pfn1  = cp0_EnrtyLo1_PFN1;
+assign c1    = cp0_EnrtyLo1_C1  ;
+assign d1    = cp0_EnrtyLo1_D1  ;
+assign v1    = cp0_EnrtyLo1_V1  ;
+
 wire   ex                          ;
 assign ex     = (ex_code != `NO_EX);
 assign cause  = cp0_cause          ;

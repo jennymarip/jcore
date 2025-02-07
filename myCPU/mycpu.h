@@ -3,9 +3,9 @@
 
     `define BR_BUS_WD            35
     `define FS_TO_DS_BUS_WD     103
-    `define DS_TO_ES_BUS_WD     187
-    `define ES_TO_MS_BUS_WD     119
-    `define MS_TO_WS_BUS_WD     117
+    `define DS_TO_ES_BUS_WD     188
+    `define ES_TO_MS_BUS_WD     120
+    `define MS_TO_WS_BUS_WD     118
     `define WS_TO_RF_BUS_WD      38
 
     `define ST_WORD_LEN           4
@@ -30,5 +30,6 @@
     `define ADEL            5'b00100
     `define ADES            5'b00101
     `define RI              5'b01010
+    `define TLB_INV         5'b00001
     `define NO_EX           5'b11111
 `endif

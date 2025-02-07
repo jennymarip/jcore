@@ -24,12 +24,27 @@ module wb_stage(
     output        WS_EX           ,
     output [31:0] cp0_epc         ,
     output        ERET            ,
+    output        tlbwi_inv       ,
+    output [31:0] tlbwi_pc        ,
     // tlbp
     input         es_inst_tlbp    ,
     input         s1_found        ,
     input         s1_index        ,
     output [31:0] cp0_EntryHi     ,
-    output        inst_mtc0
+    output        inst_mtc0       ,
+    output        tlbwi_we        ,
+    output [ 3:0] tlbwi_index     ,
+    output [18:0] tlbwi_vpn2      ,
+    output [ 7:0] tlbwi_asid      ,
+    output        tlbwi_g         ,
+    output [19:0] tlbwi_pfn0      ,
+    output [ 2:0] tlbwi_c0        ,
+    output        tlbwi_d0        ,
+    output        tlbwi_v0        ,
+    output [19:0] tlbwi_pfn1      ,
+    output [ 2:0] tlbwi_c1        ,
+    output        tlbwi_d1        ,
+    output        tlbwi_v1
 );
 
 reg         ws_valid;
@@ -39,27 +54,29 @@ reg [`MS_TO_WS_BUS_WD -1:0] ms_to_ws_bus_r;
 wire        ws_gr_we;
 wire [ 4:0] ws_dest;
 wire [31:0] ws_final_result;
-wire [31:0] ws_pc       ;
-wire        slot        ;
-wire        eret        ;
-wire [ 4:0] ex_code     ;
-wire [31:0] BadVAddr    ;
-wire        pc_error    ;
-wire        ws_inst_mtc0;
-wire        ws_inst_mfc0;
-wire [ 4:0] rd          ;
-assign {rd             ,  //116:112
+wire [31:0] ws_pc        ;
+wire        slot         ;
+wire        eret         ;
+wire [ 4:0] ex_code      ;
+wire [31:0] BadVAddr     ;
+wire        pc_error     ;
+wire        ws_inst_mtc0 ;
+wire        ws_inst_mfc0 ;
+wire        ws_inst_tlbwi;
+wire [ 4:0] rd           ;
+assign {rd             ,  //117:113
+        ws_inst_tlbwi  ,  //112:112
         ws_inst_mfc0   ,  //111:111
         ws_inst_mtc0   ,  //110:110
         pc_error       ,  //109:109
-        BadVAddr          //108:77
-       } = ms_to_ws_bus_r[116:77];
+        BadVAddr          //108: 77
+       } = ms_to_ws_bus_r[117:77];
 assign {eret           ,  //71:71
         slot           ,  //70:70
         ws_gr_we       ,  //69:69
         ws_dest        ,  //68:64
         ws_final_result,  //63:32
-        ws_pc             //31:0
+        ws_pc             //31: 0
        } = ms_to_ws_bus_r[71:0];
 wire        rf_we;
 wire [4 :0] rf_waddr;
@@ -112,6 +129,8 @@ assign ex_code = interrupt ? `INT :
 
 assign WS_EX = (ex_code != `NO_EX);
 assign ERET  = eret ;
+assign tlbwi_inv = ws_inst_tlbwi && ws_valid;
+assign tlbwi_pc  = ws_pc        ;
 
 wire [ 4:0] cp0_raddr;
 wire [31:0] cp0_rdata;
@@ -128,6 +147,21 @@ assign inst_mtc0 = ws_inst_mtc0 && ws_valid;
 assign cp0_waddr   = WS_EX ? `CP0_EPC :  5'b11111;
 assign cp0_wdata   = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
 
+// tlb
+wire [ 3:0] index ;
+wire [18:0] vpn2  ;
+wire [ 7:0] asid  ;
+wire        g     ;
+wire [19:0] pfn0  ;
+wire [ 2:0] c0    ;
+wire        d0, v0;
+wire [19:0] pfn1  ;
+wire [ 2:0] c1    ;
+wire        d1, v1;
+assign tlbwi_we = ws_inst_tlbwi && ws_valid;
+assign {tlbwi_index, tlbwi_vpn2, tlbwi_asid, tlbwi_g, tlbwi_pfn0, tlbwi_c0, tlbwi_d0, tlbwi_v0, tlbwi_pfn1, tlbwi_c1, tlbwi_d1, tlbwi_v1} = {
+    index, vpn2, asid, g, pfn0, c0, d0, v0, pfn1, c1, d1, v1
+};
 // CP0
 CP0 CP0(
     .clk        (clk          ),
@@ -154,6 +188,18 @@ CP0 CP0(
     // tlbp
     .es_inst_tlbp (es_inst_tlbp),
     .s1_found     (s1_found    ),
-    .s1_index     (s1_index    )
+    .s1_index     (s1_index    ),
+    .index        (index       ),
+    .vpn2         (vpn2        ),
+    .asid         (asid        ),
+    .g            (g           ),
+    .pfn0         (pfn0        ),
+    .c0           (c0          ),
+    .d0           (d0          ),
+    .v0           (v0          ),
+    .pfn1         (pfn1        ),
+    .c1           (c1          ),
+    .d1           (d1          ),
+    .v1           (v1          )
     );
 endmodule

@@ -90,7 +90,9 @@ if_stage if_stage(
     // EX
     .ERET             (ERET             ),
     .cp0_epc          (cp0_epc          ),
-    .ex_word          (ex_word          )
+    .ex_word          (ex_word          ),
+    .tlbwi_inv        (tlbwi_inv        ),
+    .tlbwi_pc         (tlbwi_pc         )
 );
 wire [ 3:0]               dm_word     ;
 wire [ `LD_WORD_LEN -1:0] ld_word     ;
@@ -247,6 +249,8 @@ mem_stage mem_stage(
     .MS_ERET        (MS_ERET        ),
     .MS_EX          (MS_EX          )
 );
+wire        tlbwi_inv;
+wire [31:0] tlbwi_pc ;
 // WB stage
 wb_stage wb_stage(
     .clk            (clk            ),
@@ -272,18 +276,44 @@ wb_stage wb_stage(
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
     .ERET             (ERET             ),
+    .tlbwi_inv        (tlbwi_inv        ),
+    .tlbwi_pc         (tlbwi_pc         ),
     // tlbp
     .es_inst_tlbp     (es_inst_tlbp     ),
     .s1_found         (s1_found         ),
     .s1_index         (s1_index         ),
     .cp0_EntryHi      (cp0_EntryHi      ),
-    .inst_mtc0        (ws_inst_mtc0     )
+    .inst_mtc0        (ws_inst_mtc0     ),
+    .tlbwi_we         (we               ),
+    .tlbwi_index      (w_index          ),
+    .tlbwi_vpn2       (w_vpn2           ),
+    .tlbwi_asid       (w_asid           ),
+    .tlbwi_g          (w_g              ),
+    .tlbwi_pfn0       (w_pfn0           ),
+    .tlbwi_c0         (w_c0             ),
+    .tlbwi_d0         (w_d0             ),
+    .tlbwi_v0         (w_v0             ),
+    .tlbwi_pfn1       (w_pfn1           ),
+    .tlbwi_c1         (w_c1             ), 
+    .tlbwi_d1         (w_d1             ),
+    .tlbwi_v1         (w_v1             )
 );
 wire [18:0] s1_vpn2;
 wire [ 7:0] s1_asid;
 wire s1_found, s1_index;
 assign s1_vpn2 = cp0_EntryHi[31:13];
 assign s1_asid = cp0_EntryHi[ 7: 0];
+wire [ 3:0] w_index;
+wire [18:0] w_vpn2 ;
+wire [ 7:0] w_asid ;
+wire        w_g, we;
+wire [19:0] w_pfn0 ;
+wire [ 2:0] w_c0   ;
+wire        w_d0, w_v0;
+wire [19:0] w_pfn1 ;
+wire [ 2:0] w_c1   ;
+wire        w_d1, w_v1;
+
 // tlb
 tlb #(.TLBNUM(16)) tlb
 (

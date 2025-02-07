@@ -122,71 +122,26 @@ wire [31:0] rd_d;
 wire [31:0] sa_d;
 wire [63:0] func_d;
 
-wire        inst_addu;
-wire        inst_add;
-wire        inst_subu;
-wire        inst_sub;
-wire        inst_slt;
-wire        inst_slti;
-wire        inst_sltu;
-wire        inst_sltiu;
-wire        inst_and;
-wire        inst_andi;
-wire        inst_or;
-wire        inst_ori;
-wire        inst_xor;
-wire        inst_xori;
-wire        inst_nor;
-wire        inst_sll;
-wire        inst_sllv;
-wire        inst_srl;
-wire        inst_srlv;
-wire        inst_sra;
-wire        inst_srav;
-wire        inst_addiu;
-wire        inst_addi;
+/* 所有实现的指令 */
+wire        inst_addu, inst_add, inst_subu, inst_sub;
+wire        inst_and, inst_andi, inst_or, inst_ori, inst_xor, inst_xori, inst_nor;
+wire        inst_slt, inst_slti, inst_sltu, inst_sltiu, inst_sll, inst_sllv, inst_srl, inst_srlv, inst_sra, inst_srav;
+wire        inst_addiu, inst_addi;
 wire        inst_lui;
-wire        inst_lw;
-wire        inst_lb;
-wire        inst_lbu;
-wire        inst_lh;
-wire        inst_lhu;
-wire        inst_lwl;
-wire        inst_lwr;
-wire        inst_sw;
-wire        inst_sb;
-wire        inst_sh;
-wire        inst_swl;
-wire        inst_swr;
-wire        inst_beq;
-wire        inst_bne;
-wire        inst_bgez;
-wire        inst_bgtz;
-wire        inst_blez;
-wire        inst_bltz;
-wire        inst_bgezal;
-wire        inst_bltzal;
-wire        inst_j;
-wire        inst_jal;
-wire        inst_jr;
-wire        inst_jalr;
-wire        inst_div;
-wire        inst_divu;
-wire        inst_mult;
-wire        inst_multu;
-wire        inst_mflo;
-wire        inst_mfhi;
-wire        inst_mtlo;
-wire        inst_mthi;
-wire        inst_syscall;
-wire        inst_break;
-wire        inst_mtc0;
-wire        inst_mfc0;
+wire        inst_lw, inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr;
+wire        inst_sw, inst_sb, inst_sh, inst_swl, inst_swr;
+wire        inst_beq, inst_bne, inst_bgez, inst_bgtz, inst_blez, inst_bltz, inst_bgezal, inst_bltzal;
+wire        inst_j, inst_jal, inst_jr, inst_jalr;
+wire        inst_div, inst_divu, inst_mult, inst_multu;
+wire        inst_mflo, inst_mfhi, inst_mtlo, inst_mthi;
+wire        inst_syscall, inst_break;
+wire        inst_mtc0, inst_mfc0;
 wire        inst_eret;
-wire        inst_tlbp;
+wire        inst_tlbp, inst_tlbwi;
 wire        inst_no;
-wire        not_in_alu;
+/* ************ */
 
+wire        not_in_alu;
 wire        dst_is_r31;  
 wire        dst_is_rt ;  
 
@@ -206,7 +161,8 @@ wire        eret   ;
 
 assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {inst_tlbp       ,  //186:186
+assign ds_to_es_bus = {inst_tlbwi      ,  //187:187
+                       inst_tlbp       ,  //186:186
                        inst_mfc0       ,  //185:185
                        inst_mtc0       ,  //184:184
                        pc_error        ,  //183:183
@@ -344,6 +300,7 @@ assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_eret   = (ds_inst[31:0] == 32'h42000018); // 1
 assign inst_tlbp   = {ds_inst[31:0] == 32'h42000008};
+assign inst_tlbwi  = {ds_inst[31:0] == 32'h42000002};
 
 assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz |
                      inst_jr  |
@@ -358,7 +315,6 @@ assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
 assign ld_word     = {inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr};
 assign mv_word     = {inst_mflo, inst_mfhi, inst_mtlo, inst_mthi};
 assign st_word     = {inst_sb, inst_sh, inst_swl, inst_swr} ;
-// assign MTC0        = inst_mtc0 & ~ERET & ~ES_ERET & ~MS_ERET & ~(WS_EX || MS_EX || ES_EX) & ds_valid;
 assign of_test     = {inst_sub, inst_addi, inst_add}        ;
 
 assign alu_op[ 0] = inst_addu | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lwl | inst_lwr | inst_sw | inst_sb | inst_sh | inst_swl | inst_swr | inst_j | inst_jal | inst_jalr | inst_bgezal | inst_bltzal | inst_add | inst_addi;
@@ -456,7 +412,19 @@ assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :
                  inst_syscall                     ? `SYSCALL :
                  inst_break                       ? `BREAK   :
                  inst_no                          ? `RI      :
+                 ds_valid && tlb_inv              ? `TLB_INV :
                                                     fs_to_ds_bus_r[68:64];
 assign eret  = inst_eret   ;
+/* tlbwi 指令之后的第一条指令标记异常（不是真的异常） */
+reg tlb_inv;
+always @ (posedge clk) begin
+    if (reset) begin
+        tlb_inv <= 1'b0;
+    end else if (inst_tlbwi) begin
+        tlb_inv <= 1'b1;
+    end else if (ds_to_es_valid && es_allowin) begin
+        tlb_inv <= 1'b0;
+    end
+end
 
 endmodule
