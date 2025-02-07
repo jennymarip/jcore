@@ -66,8 +66,10 @@ wire        mem_access   ;
 wire        ms_inst_mtc0 ;
 wire        ms_inst_mfc0 ;
 wire        ms_inst_tlbwi;
+wire        ms_inst_tlbr ;
 wire [ 4:0] rd           ;
-assign {rd             ,  //119:115
+assign {rd             ,  //120:116
+        ms_inst_tlbr   ,  //115:115
         ms_inst_tlbwi  ,  //114:114
         ms_inst_mfc0   ,  //113:113
         ms_inst_mtc0   ,  //112:112
@@ -101,7 +103,8 @@ assign MEM_dest  = ms_dest & {5{ms_valid}};
 assign inst_mfc0 = ms_inst_mfc0;
 assign inst_mtc0 = ms_inst_mtc0 && ms_valid;
 
-assign ms_to_ws_bus = {rd             ,  //117:113
+assign ms_to_ws_bus = {rd             ,  //118:114
+                       ms_inst_tlbr   ,  //113:113
                        ms_inst_tlbwi  ,  //112:112
                        ms_inst_mfc0   ,  //111:111
                        ms_inst_mtc0   ,  //110:110

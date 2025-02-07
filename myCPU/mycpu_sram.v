@@ -91,8 +91,8 @@ if_stage if_stage(
     .ERET             (ERET             ),
     .cp0_epc          (cp0_epc          ),
     .ex_word          (ex_word          ),
-    .tlbwi_inv        (tlbwi_inv        ),
-    .tlbwi_pc         (tlbwi_pc         )
+    .tlb_inv          (tlb_inv          ),
+    .tlb_pc           (tlb_pc           )
 );
 wire [ 3:0]               dm_word     ;
 wire [ `LD_WORD_LEN -1:0] ld_word     ;
@@ -249,8 +249,8 @@ mem_stage mem_stage(
     .MS_ERET        (MS_ERET        ),
     .MS_EX          (MS_EX          )
 );
-wire        tlbwi_inv;
-wire [31:0] tlbwi_pc ;
+wire        tlb_inv;
+wire [31:0] tlb_pc ;
 // WB stage
 wb_stage wb_stage(
     .clk            (clk            ),
@@ -276,8 +276,8 @@ wb_stage wb_stage(
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
     .ERET             (ERET             ),
-    .tlbwi_inv        (tlbwi_inv        ),
-    .tlbwi_pc         (tlbwi_pc         ),
+    .tlb_inv          (tlb_inv          ),
+    .tlb_pc           (tlb_pc           ),
     // tlbp
     .es_inst_tlbp     (es_inst_tlbp     ),
     .s1_found         (s1_found         ),
@@ -296,7 +296,19 @@ wb_stage wb_stage(
     .tlbwi_pfn1       (w_pfn1           ),
     .tlbwi_c1         (w_c1             ), 
     .tlbwi_d1         (w_d1             ),
-    .tlbwi_v1         (w_v1             )
+    .tlbwi_v1         (w_v1             ),
+    .tlbr_index       (r_index          ),
+    .tlbr_vpn2        (r_vpn2           ),
+    .tlbr_asid        (r_asid           ),
+    .tlbr_g           (r_g              ),
+    .tlbr_pfn0        (r_pfn0           ),
+    .tlbr_c0          (r_c0             ),
+    .tlbr_d0          (r_d0             ),
+    .tlbr_v0          (r_v0             ),
+    .tlbr_pfn1        (r_pfn1           ),
+    .tlbr_c1          (r_c1             ), 
+    .tlbr_d1          (r_d1             ),
+    .tlbr_v1          (r_v1             )
 );
 wire [18:0] s1_vpn2;
 wire [ 7:0] s1_asid;
@@ -313,6 +325,18 @@ wire        w_d0, w_v0;
 wire [19:0] w_pfn1 ;
 wire [ 2:0] w_c1   ;
 wire        w_d1, w_v1;
+
+wire [ 3:0] r_index;
+wire [18:0] r_vpn2 ;
+wire [ 7:0] r_asid ;
+wire        r_g    ;
+wire [19:0] r_pfn0 ;
+wire [ 2:0] r_c0   ;
+wire        r_d0, r_v0;
+wire [19:0] r_pfn1 ;
+wire [ 2:0] r_c1   ;
+wire        r_d1, r_v1;
+
 
 // tlb
 tlb #(.TLBNUM(16)) tlb

@@ -25,8 +25,8 @@ module if_stage(
     input                          ERET             ,
     input  [31:0]                  cp0_epc          ,
     input  [ 3:0]                  ex_word          ,
-    input                          tlbwi_inv        ,
-    input  [31:0]                  tlbwi_pc
+    input                          tlb_inv        ,
+    input  [31:0]                  tlb_pc
 );
 
 reg         fs_valid   ;
@@ -116,15 +116,15 @@ wire   addr_ok_valid;
 assign addr_ok_valid = (inst_sram_addr == inst_sram_addr_ok_addr);
 
 // EX unit
-wire        WS_EX        ;
-reg         WS_EX_reg    ;
-reg         tlbwi_inv_reg;
-reg         tlbwi_pc_reg ;
-wire [31:0] fs_inst      ;
-reg  [31:0] fs_pc        ;
-wire [ 4:0] ex_code      ;
-wire [31:0] BadVAddr     ;
-wire        pc_error     ;
+wire        WS_EX      ;
+reg         WS_EX_reg  ;
+reg         tlb_inv_reg;
+reg  [31:0] tlb_pc_reg ;
+wire [31:0] fs_inst    ;
+reg  [31:0] fs_pc      ;
+wire [ 4:0] ex_code    ;
+wire [31:0] BadVAddr   ;
+wire        pc_error   ;
 
 assign WS_EX        = ex_word[0]                                               ;
 assign fs_inst      = inst_sram_rdata                                          ;
@@ -148,14 +148,14 @@ always @ (posedge clk) begin
 end
 always @ (posedge clk) begin
     if (reset) begin
-        tlbwi_inv_reg <=  1'b0;
-        tlbwi_pc_reg  <= 32'b0;
-    end else if (tlbwi_inv && ~ pre_fs_ready_go_flag) begin
-        tlbwi_inv_reg <= 1'b1    ;
-        tlbwi_pc_reg  <= tlbwi_pc;
+        tlb_inv_reg <=  1'b0;
+        tlb_pc_reg  <= 32'b0;
+    end else if (tlb_inv && ~ pre_fs_ready_go_flag) begin
+        tlb_inv_reg <= 1'b1    ;
+        tlb_pc_reg  <= tlb_pc;
     end else if (pre_fs_ready_go && fs_allowin) begin
-        tlbwi_inv_reg <=  1'b0;
-        tlbwi_pc_reg  <= 32'b0;
+        tlb_inv_reg <=  1'b0;
+        tlb_pc_reg  <= 32'b0;
     end
 end
 
@@ -166,11 +166,11 @@ wire   pre_fs_ready_go_flag;
 assign pre_fs_ready_go_flag = pre_fs_ready_go || pre_fs_ready_go_reg;
 assign to_fs_valid  = ~reset && pre_fs_ready_go_flag;
 assign seq_pc       = fs_pc + 3'h4                  ;
-assign nextpc       = (WS_EX || WS_EX_reg) && ~tlbwi_inv ? 32'hbfc00380                                                              : 
-                      tlbwi_inv || tlbwi_inv_reg         ? ((tlbwi_pc != 32'b0) ? tlbwi_pc : tlbwi_pc_reg)                           :
-                      ERET  || ERET_reg                  ? (ERET ? cp0_epc : cp0_epc_reg)                                            :
-                      is_slot_reg                        ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
-                                                           seq_pc;
+assign nextpc       = (WS_EX || WS_EX_reg) && ~(tlb_inv || tlb_inv_reg) ? 32'hbfc00380                                   : 
+                      tlb_inv || tlb_inv_reg ? ((tlb_pc != 32'b0) ? tlb_pc : tlb_pc_reg)                                 :
+                      ERET  || ERET_reg      ? (ERET ? cp0_epc : cp0_epc_reg)                                            :
+                      is_slot_reg            ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
+                                               seq_pc;
 
 assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok && addr_ok_valid);
 always@ (posedge clk) begin

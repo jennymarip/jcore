@@ -24,8 +24,8 @@ module wb_stage(
     output        WS_EX           ,
     output [31:0] cp0_epc         ,
     output        ERET            ,
-    output        tlbwi_inv       ,
-    output [31:0] tlbwi_pc        ,
+    output        tlb_inv         ,
+    output [31:0] tlb_pc          ,
     // tlbp
     input         es_inst_tlbp    ,
     input         s1_found        ,
@@ -44,7 +44,19 @@ module wb_stage(
     output [19:0] tlbwi_pfn1      ,
     output [ 2:0] tlbwi_c1        ,
     output        tlbwi_d1        ,
-    output        tlbwi_v1
+    output        tlbwi_v1        ,
+    output [ 3:0] tlbr_index      ,
+    input  [18:0] tlbr_vpn2       ,
+    input  [ 7:0] tlbr_asid       ,
+    input         tlbr_g          ,
+    input  [19:0] tlbr_pfn0       ,
+    input  [ 2:0] tlbr_c0         ,
+    input         tlbr_d0         ,
+    input         tlbr_v0         ,
+    input  [19:0] tlbr_pfn1       ,
+    input  [ 2:0] tlbr_c1         ,
+    input         tlbr_d1         ,
+    input         tlbr_v1
 );
 
 reg         ws_valid;
@@ -63,8 +75,10 @@ wire        pc_error     ;
 wire        ws_inst_mtc0 ;
 wire        ws_inst_mfc0 ;
 wire        ws_inst_tlbwi;
+wire        ws_inst_tlbr ;
 wire [ 4:0] rd           ;
-assign {rd             ,  //117:113
+assign {rd             ,  //118:114
+        ws_inst_tlbr   ,  //113:113
         ws_inst_tlbwi  ,  //112:112
         ws_inst_mfc0   ,  //111:111
         ws_inst_mtc0   ,  //110:110
@@ -129,8 +143,8 @@ assign ex_code = interrupt ? `INT :
 
 assign WS_EX = (ex_code != `NO_EX);
 assign ERET  = eret ;
-assign tlbwi_inv = ws_inst_tlbwi && ws_valid;
-assign tlbwi_pc  = ws_pc        ;
+assign tlb_inv = (ex_code == `TLB_INV) && ws_valid;
+assign tlb_pc  = ws_pc        ;
 
 wire [ 4:0] cp0_raddr;
 wire [31:0] cp0_rdata;
@@ -141,6 +155,7 @@ assign cp0_epc    = eret ? cp0_rdata : 32'b0;
 assign cp0_raddr = ws_inst_mfc0 ? rd           :
                    eret         ? `CP0_EPC     :
                    es_inst_tlbp ? `CP0_EnrtyHi :
+                   ws_inst_tlbr ? `CP0_INDEX   :
                                   5'b11111;
 assign cp0_EntryHi = cp0_rdata;
 assign inst_mtc0 = ws_inst_mtc0 && ws_valid;
@@ -162,6 +177,7 @@ assign tlbwi_we = ws_inst_tlbwi && ws_valid;
 assign {tlbwi_index, tlbwi_vpn2, tlbwi_asid, tlbwi_g, tlbwi_pfn0, tlbwi_c0, tlbwi_d0, tlbwi_v0, tlbwi_pfn1, tlbwi_c1, tlbwi_d1, tlbwi_v1} = {
     index, vpn2, asid, g, pfn0, c0, d0, v0, pfn1, c1, d1, v1
 };
+assign tlbr_index = ws_inst_tlbr ? cp0_rdata[3:0] : 4'b0;
 // CP0
 CP0 CP0(
     .clk        (clk          ),
@@ -189,6 +205,7 @@ CP0 CP0(
     .es_inst_tlbp (es_inst_tlbp),
     .s1_found     (s1_found    ),
     .s1_index     (s1_index    ),
+    // tlbwi
     .index        (index       ),
     .vpn2         (vpn2        ),
     .asid         (asid        ),
@@ -200,6 +217,19 @@ CP0 CP0(
     .pfn1         (pfn1        ),
     .c1           (c1          ),
     .d1           (d1          ),
-    .v1           (v1          )
+    .v1           (v1          ),
+    // tlbr
+    .ws_inst_tlbr (ws_inst_tlbr && ws_valid),
+    .r_vpn2       (tlbr_vpn2   ),
+    .r_asid       (tlbr_asid   ),
+    .r_g          (tlbr_g      ),
+    .r_pfn0       (tlbr_pfn0   ),
+    .r_c0         (tlbr_c0     ),
+    .r_d0         (tlbr_d0     ),
+    .r_v0         (tlbr_v0     ),
+    .r_pfn1       (tlbr_pfn1   ),
+    .r_c1         (tlbr_c1     ),
+    .r_d1         (tlbr_d1     ),
+    .r_v1         (tlbr_v1     )
     );
 endmodule

@@ -101,9 +101,11 @@ wire        pc_error           ;
 wire        es_inst_mtc0       ;
 wire        es_inst_mfc0       ;
 wire        es_inst_tlbwi      ;
+wire        es_inst_tlbr       ;
 wire        mem_access         ;
 
-assign {es_inst_tlbwi,
+assign {es_inst_tlbr ,
+        es_inst_tlbwi,
         es_inst_tlbp ,
         es_inst_mfc0 ,
         es_inst_mtc0 ,
@@ -137,7 +139,8 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {rd               ,  //119:115
+assign es_to_ms_bus = {rd               ,  //120:116
+                       es_inst_tlbr     ,  //115:115
                        es_inst_tlbwi    ,  //114:114      
                        es_inst_mfc0     ,  //113:113
                        es_inst_mtc0     ,  //112:112

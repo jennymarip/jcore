@@ -25,6 +25,7 @@ module CP0(
     input         es_inst_tlbp,
     input         s1_found    ,
     input         s1_index    ,
+    // tlbwi
     output [ 3:0] index       ,
     output [18:0] vpn2        ,
     output [ 7:0] asid        ,
@@ -36,8 +37,20 @@ module CP0(
     output [19:0] pfn1        ,
     output [ 2:0] c1          ,
     output        d1          ,
-    output        v1
-
+    output        v1          ,
+    // tlbr
+    input         ws_inst_tlbr,
+    input [18:0]  r_vpn2      ,
+    input [ 7:0]  r_asid      ,
+    input         r_g         ,
+    input [19:0]  r_pfn0      ,
+    input [ 2:0]  r_c0        ,
+    input         r_d0        ,
+    input         r_v0        ,
+    input [19:0]  r_pfn1      ,
+    input [ 2:0]  r_c1        ,
+    input         r_d1        ,
+    input         r_v1
 );
 assign index = cp0_index_index  ;
 assign vpn2  = cp0_EnrtyHi_VPN2 ;
@@ -221,6 +234,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo0_PFN0 <= 20'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo0)) begin
         cp0_EnrtyLo0_PFN0 <= mtc0_wdata[25:6];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo0_PFN0 <= r_pfn0;
     end
 end
 reg [ 2:0] cp0_EnrtyLo0_C0;
@@ -229,6 +244,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo0_C0 <= 3'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo0)) begin
         cp0_EnrtyLo0_C0 <= mtc0_wdata[5:3];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo0_C0 <= r_c0;
     end
 end
 reg cp0_EnrtyLo0_D0;
@@ -237,6 +254,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo0_D0 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo0)) begin
         cp0_EnrtyLo0_D0 <= mtc0_wdata[2];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo0_D0 <= r_d0;
     end
 end
 reg cp0_EnrtyLo0_V0;
@@ -245,6 +264,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo0_V0 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo0)) begin
         cp0_EnrtyLo0_V0 <= mtc0_wdata[1];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo0_V0 <= r_v0;
     end
 end
 reg cp0_EnrtyLo0_G0;
@@ -253,6 +274,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo0_G0 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo0)) begin
         cp0_EnrtyLo0_G0 <= mtc0_wdata[0];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo0_G0 <= r_g;
     end
 end
 assign cp0_EnrtyLo0 = {6'b0, cp0_EnrtyLo0_PFN0, cp0_EnrtyLo0_C0, cp0_EnrtyLo0_D0, cp0_EnrtyLo0_V0, cp0_EnrtyLo0_G0};
@@ -265,6 +288,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo1_PFN1 <= 20'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo1)) begin
         cp0_EnrtyLo1_PFN1 <= mtc0_wdata[25:6];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo1_PFN1 <= r_pfn1;
     end
 end
 reg [ 2:0] cp0_EnrtyLo1_C1;
@@ -273,6 +298,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo1_C1 <= 3'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo1)) begin
         cp0_EnrtyLo1_C1 <= mtc0_wdata[5:3];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo1_C1 <= r_c1;
     end
 end
 reg cp0_EnrtyLo1_D1;
@@ -281,6 +308,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo1_D1 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo1)) begin
         cp0_EnrtyLo1_D1 <= mtc0_wdata[2];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo1_D1 <= r_d1;
     end
 end
 reg cp0_EnrtyLo1_V1;
@@ -289,6 +318,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo1_V1 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo1)) begin
         cp0_EnrtyLo1_V1 <= mtc0_wdata[1];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo1_V1 <= r_v1;
     end
 end
 reg cp0_EnrtyLo1_G1;
@@ -297,6 +328,8 @@ always @ (posedge clk) begin
         cp0_EnrtyLo1_G1 <= 1'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyLo1)) begin
         cp0_EnrtyLo1_G1 <= mtc0_wdata[0];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyLo1_G1 <= r_g;
     end
 end
 assign cp0_EnrtyLo1 = {6'b0, cp0_EnrtyLo1_PFN1, cp0_EnrtyLo1_C1, cp0_EnrtyLo1_D1, cp0_EnrtyLo1_V1, cp0_EnrtyLo1_G1};
@@ -309,6 +342,8 @@ always @ (posedge clk) begin
         cp0_EnrtyHi_VPN2 <= 19'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyHi)) begin
         cp0_EnrtyHi_VPN2 <= mtc0_wdata[31:13];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyHi_VPN2 <= r_vpn2;
     end
 end
 reg [ 7:0] cp0_EnrtyHi_ASID;
@@ -317,6 +352,8 @@ always @ (posedge clk) begin
         cp0_EnrtyHi_ASID <= 8'b0;
     end else if (mtc0 && (mtc0_waddr == `CP0_EnrtyHi)) begin
         cp0_EnrtyHi_ASID <= mtc0_wdata[7:0];
+    end else if (ws_inst_tlbr) begin
+        cp0_EnrtyHi_ASID <= r_asid;
     end
 end
 assign cp0_EnrtyHi = {cp0_EnrtyHi_VPN2, 5'b0, cp0_EnrtyHi_ASID};

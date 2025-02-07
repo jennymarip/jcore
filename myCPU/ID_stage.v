@@ -137,7 +137,7 @@ wire        inst_mflo, inst_mfhi, inst_mtlo, inst_mthi;
 wire        inst_syscall, inst_break;
 wire        inst_mtc0, inst_mfc0;
 wire        inst_eret;
-wire        inst_tlbp, inst_tlbwi;
+wire        inst_tlbp, inst_tlbwi, inst_tlbr;
 wire        inst_no;
 /* ************ */
 
@@ -161,7 +161,8 @@ wire        eret   ;
 
 assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {inst_tlbwi      ,  //187:187
+assign ds_to_es_bus = {inst_tlbr       ,  //188:188
+                       inst_tlbwi      ,  //187:187
                        inst_tlbp       ,  //186:186
                        inst_mfc0       ,  //185:185
                        inst_mtc0       ,  //184:184
@@ -299,8 +300,9 @@ assign inst_break  = op_d[6'h00] & func_d[6'h0d]; // 1
 assign inst_mtc0   = op_d[6'h10] & rs_d[5'h04] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_mfc0   = op_d[6'h10] & rs_d[5'h00] & (ds_inst[10: 3] == 8'b0); // 1
 assign inst_eret   = (ds_inst[31:0] == 32'h42000018); // 1
-assign inst_tlbp   = {ds_inst[31:0] == 32'h42000008};
-assign inst_tlbwi  = {ds_inst[31:0] == 32'h42000002};
+assign inst_tlbp   = (ds_inst[31:0] == 32'h42000008);
+assign inst_tlbwi  = (ds_inst[31:0] == 32'h42000002);
+assign inst_tlbr   = (ds_inst[31:0] == 32'h42000001);
 
 assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | inst_bltz |
                      inst_jr  |
@@ -309,7 +311,7 @@ assign not_in_alu  = inst_beq | inst_bne | inst_bgez | inst_bgtz | inst_blez | i
                      inst_syscall | inst_break | inst_eret |
                      inst_mtc0 | inst_mfc0;
 
-assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu;
+assign inst_no     = (alu_op[13:0] == 14'b0) & ~not_in_alu & ~(inst_tlbwi || inst_tlbr || inst_tlbp);
                      
 
 assign ld_word     = {inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lwl, inst_lwr};
@@ -415,12 +417,12 @@ assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :
                  ds_valid && tlb_inv              ? `TLB_INV :
                                                     fs_to_ds_bus_r[68:64];
 assign eret  = inst_eret   ;
-/* tlbwi 指令之后的第一条指令标记异常（不是真的异常） */
+/* tlbwi 和tlbr 指令之后的第一条指令标记异常（不是真的异常） */
 reg tlb_inv;
 always @ (posedge clk) begin
     if (reset) begin
         tlb_inv <= 1'b0;
-    end else if (inst_tlbwi) begin
+    end else if ((inst_tlbwi || inst_tlbr) && ds_to_es_valid && es_allowin) begin
         tlb_inv <= 1'b1;
     end else if (ds_to_es_valid && es_allowin) begin
         tlb_inv <= 1'b0;
