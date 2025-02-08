@@ -24,7 +24,7 @@ module CP0(
     // tlbp
     input         es_inst_tlbp,
     input         s1_found    ,
-    input         s1_index    ,
+    input  [ 3:0] s1_index    ,
     // tlbwi
     output [ 3:0] index       ,
     output [18:0] vpn2        ,
@@ -224,7 +224,7 @@ always @ (posedge clk) begin
         cp0_index_index <= s1_index;
     end
 end
-assign cp0_index = {cp0_index_p, 26'b0, cp0_index_index};
+assign cp0_index = {cp0_index_p, 27'b0, cp0_index_index};
 
 // EnrtyLo0 (tlb)
 wire [31:0] cp0_EnrtyLo0;
