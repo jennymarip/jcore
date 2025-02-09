@@ -56,8 +56,11 @@ module wb_stage(
     input  [19:0] tlbr_pfn1       ,
     input  [ 2:0] tlbr_c1         ,
     input         tlbr_d1         ,
-    input         tlbr_v1
+    input         tlbr_v1         ,
+    // mmu
+    output [ 7:0] ASID
 );
+assign ASID = asid;
 
 reg         ws_valid;
 wire        ws_ready_go;

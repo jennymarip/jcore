@@ -10,6 +10,10 @@ module if_stage(
     // to ds
     output                         fs_to_ds_valid   ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus     ,
+    // mmu 
+    output [31:0]             vaddr,
+    input  [31:0]             paddr,
+    input  [ 4:0]             i_ex ,
     // inst sram interface
     output                    inst_sram_en          ,
     output                    inst_sram_wr          ,
@@ -128,7 +132,9 @@ wire        pc_error   ;
 
 assign WS_EX        = ex_word[0]                                               ;
 assign fs_inst      = inst_sram_rdata                                          ;
-assign ex_code      = (ex_word == 4'b0) & (fs_pc[1:0] != 2'b0) ? `ADEL : `NO_EX;
+assign ex_code      = (ex_word == 4'b0) & (fs_pc[1:0] != 2'b0) ? `ADEL :
+                      (i_ex != `NO_EX)                         ? i_ex :
+                                                                 `NO_EX;
 assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0                       ;
 assign pc_error     = (ex_code == `ADEL)                                       ;
 assign fs_to_ds_bus = {is_slot_reg,
@@ -226,6 +232,8 @@ always @(posedge clk) begin
         fs_pc <= nextpc;
     end
 end
+// mmu 
+assign vaddr = nextpc;
 
 // inst sram interface
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
@@ -259,7 +267,7 @@ assign inst_sram_en    = inst_sram_en_reg;
 assign inst_sram_wr    = 1'b0            ;
 assign inst_sram_size  = 2'b10           ;
 assign inst_sram_wen   = 4'h0            ;
-assign inst_sram_addr  = nextpc          ;
+assign inst_sram_addr  = paddr           ;
 assign inst_sram_wdata = 32'b0           ;
 
 endmodule

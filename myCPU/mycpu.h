@@ -26,10 +26,13 @@
     `define SYSCALL         5'b01000
     `define BREAK           5'b01001
     `define OVERFLOW        5'b01100
+    `define RI              5'b01010
     `define INT             5'b00000
+    `define Mod             5'b00001
+    `define TLBL            5'b00010
+    `define TLBS            5'b00011
     `define ADEL            5'b00100
     `define ADES            5'b00101
-    `define RI              5'b01010
-    `define TLB_INV         5'b00001
+    `define TLB_INV         5'b00110
     `define NO_EX           5'b11111
 `endif

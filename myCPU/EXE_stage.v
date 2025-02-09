@@ -12,6 +12,11 @@ module exe_stage(
     //to ms
     output                         es_to_ms_valid,
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
+    // mmu interface
+    output [31:0] vaddr ,
+    output [ 1:0] w_or_r,
+    input  [31:0] paddr ,
+    input  [ 4:0] m_ex  ,
     // data sram interface
     output        data_sram_en     ,
     output        data_sram_wr     ,
@@ -220,6 +225,7 @@ assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX) ? ds_to_es_bus_r[150:146]:
                  (of_flag != 3'b0)                   ? `OVERFLOW : 
                  BadAddr_R                           ? `ADEL     :
                  BadAddr_W                           ? `ADES     :
+                 (m_ex != `NO_EX)                    ? m_ex      :
                                                        ds_to_es_bus_r[150:146];
 
 // HI LO reg
@@ -412,6 +418,10 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  (swr & (LDB == 2'b10))?{es_rt_value[15:0], 16'b0} :
                  (swr & (LDB == 2'b11))?{es_rt_value[7:0], 24'b0} :
                  es_rt_value[31:0];
+// mmu 
+assign vaddr  = es_alu_result;
+assign w_or_r = es_mem_we    ;
+
 // data sram interface
 wire   data_sram_req;
 assign data_sram_req = (es_load_op || es_mem_we) && es_valid && ~ES_EX;
@@ -422,11 +432,9 @@ always @(posedge clk) begin
     // set data_sram_en_reg
     if (reset) begin
         data_sram_en_reg    <= 1'b0;
-    end
-    else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
+    end else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
         data_sram_en_reg    <= data_sram_req;
-    end
-    else if (data_sram_addr_ok && data_sram_en) begin
+    end else if (data_sram_addr_ok && data_sram_en) begin
         data_sram_en_reg    <= 1'b0;
     end
     // set data_sram_en_and_ok
@@ -463,7 +471,7 @@ assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                             4'b1111
                          ) :
                          4'h0;
-assign data_sram_addr  = es_alu_result;
+assign data_sram_addr  = paddr;
 assign data_sram_wdata = st_data;
 
 assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | sh}};

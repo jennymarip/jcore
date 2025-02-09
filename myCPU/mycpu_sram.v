@@ -65,6 +65,10 @@ wire ES_EX;
 // EX word
 wire [3:0] ex_word;
 assign     ex_word = {DS_EX, ES_EX, MS_EX, WS_EX};
+// i_mmu
+wire [31:0] i_vaddr;
+wire [31:0] i_paddr;
+wire [ 4:0] i_ex   ;
 // IF stage
 if_stage if_stage(
     .clk              (clk              ),
@@ -76,6 +80,10 @@ if_stage if_stage(
     //outputs
     .fs_to_ds_valid   (fs_to_ds_valid   ),
     .fs_to_ds_bus     (fs_to_ds_bus     ),
+    // mmu
+    .vaddr (i_vaddr),
+    .paddr (i_paddr),
+    .i_ex  (i_ex   ),
     // inst sram interface
     .inst_sram_en           (inst_sram_req         ),
     .inst_sram_wr           (inst_sram_wr          ),
@@ -161,7 +169,11 @@ wire        es_inst_tlbp  ;
 wire [31:0] cp0_EntryHi   ;
 wire        ws_inst_mtc0  ;
 wire        ms_inst_mtc0  ;
-
+/* d mmu */
+wire [31:0] d_vaddr;
+wire [ 1:0] w_or_r ;
+wire [31:0] d_paddr;
+wire [ 4:0] d_m_ex ;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -175,6 +187,11 @@ exe_stage exe_stage(
     //to ms
     .es_to_ms_valid (es_to_ms_valid ),
     .es_to_ms_bus   (es_to_ms_bus   ),
+    // mmu interface
+    .vaddr  (d_vaddr),
+    .w_or_r (w_or_r ),
+    .paddr  (d_paddr),
+    .m_ex   (d_m_ex ),
     // data sram interface
     .data_sram_en     (data_sram_req    ),
     .data_sram_wr     (data_sram_wr     ),
@@ -308,13 +325,20 @@ wb_stage wb_stage(
     .tlbr_pfn1        (r_pfn1           ),
     .tlbr_c1          (r_c1             ), 
     .tlbr_d1          (r_d1             ),
-    .tlbr_v1          (r_v1             )
+    .tlbr_v1          (r_v1             ),
+    // mmu 
+    .ASID             (asid             )
 );
 wire [18:0] s1_vpn2;
 wire [ 7:0] s1_asid;
-wire s1_found, s1_index;
-assign s1_vpn2 = cp0_EntryHi[31:13];
-assign s1_asid = cp0_EntryHi[ 7: 0];
+wire [19:0] s1_pfn ;
+wire        s1_d, s1_v;
+wire [18:0] s0_vpn2;
+wire [19:0] s0_pfn ;
+wire        s0_d, s0_v;
+wire s1_found, s1_index, s0_found;
+assign s1_vpn2 = es_inst_tlbp ? cp0_EntryHi[31:13] : s1_vpn2_mmu;
+assign s1_asid = es_inst_tlbp ? cp0_EntryHi[ 7: 0] : asid       ;
 wire [ 3:0] w_index;
 wire [18:0] w_vpn2 ;
 wire [ 7:0] w_asid ;
@@ -337,6 +361,39 @@ wire [19:0] r_pfn1 ;
 wire [ 2:0] r_c1   ;
 wire        r_d1, r_v1;
 
+wire [ 7:0] asid;
+// mmu
+/* i_mmu */
+wire s0_odd_page;
+i_mmu i_mmu(
+    .vaddr  (i_vaddr),
+    .paddr  (i_paddr),
+    .excode (i_ex   ),
+    // tlb interface
+    .s0_vpn2     (s0_vpn2    ),
+    .s0_odd_page (s0_odd_page),
+    .s0_found    (s0_found   ),
+    .s0_pfn      (s0_pfn     ),
+    .s0_d        (s0_d       ),
+    .s0_v        (s0_v       )
+);
+/* d_mmu */
+wire [18:0] s1_vpn2_mmu;
+wire        s1_odd_page;
+d_mmu d_mmu(
+    .vaddr  (d_vaddr),
+    .w_or_r (w_or_r ),
+    .paddr  (d_paddr),
+    .excode (d_m_ex ),
+    // tlb interface
+    .s1_vpn2     (s1_vpn2_mmu),
+    .s1_odd_page (s1_odd_page),
+    .s1_found    (s1_found   ),
+    .s1_pfn      (s1_pfn     ),
+    .s1_d        (s1_d       ),
+    .s1_v        (s1_v       )
+);
+
 
 // tlb
 tlb #(.TLBNUM(16)) tlb
@@ -345,7 +402,7 @@ tlb #(.TLBNUM(16)) tlb
     // search port 0
     .s0_vpn2     (s0_vpn2    ),
     .s0_odd_page (s0_odd_page),
-    .s0_asid     (s0_asid    ),
+    .s0_asid     (asid       ),
     .s0_found    (s0_found   ),
     .s0_index    (s0_index   ),
     .s0_pfn      (s0_pfn     ),
