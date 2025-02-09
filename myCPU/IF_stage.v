@@ -129,11 +129,13 @@ reg  [31:0] fs_pc      ;
 wire [ 4:0] ex_code    ;
 wire [31:0] BadVAddr   ;
 wire        pc_error   ;
+wire        unmapped   ;
 
+assign unmapped = nextpc[31] && (nextpc[30:28] <= 3'b100); // 若不进行地址转换，则没有tlb异常
 assign WS_EX        = ex_word[0]                                               ;
 assign fs_inst      = inst_sram_rdata                                          ;
-assign ex_code      = (ex_word == 4'b0) & (fs_pc[1:0] != 2'b0) ? `ADEL :
-                      (i_ex != `NO_EX)                         ? i_ex :
+assign ex_code      = (ex_word == 4'b0) && (fs_pc[1:0] != 2'b0) ? `ADEL :
+                      ~unmapped && (i_ex != `NO_EX)             ? i_ex  :
                                                                  `NO_EX;
 assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0                       ;
 assign pc_error     = (ex_code == `ADEL)                                       ;
