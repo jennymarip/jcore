@@ -14,9 +14,10 @@ module exe_stage(
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
     // mmu interface
     output [31:0] vaddr ,
-    output [ 1:0] w_or_r,
+    output        w_or_r,
     input  [31:0] paddr ,
     input  [ 4:0] m_ex  ,
+    input         refill,
     // data sram interface
     output        data_sram_en     ,
     output        data_sram_wr     ,
@@ -52,6 +53,8 @@ module exe_stage(
     input         MS_ERET       ,
     output        ES_ERET       ,
     input  [ 2:0] of_test       ,// single hot
+    input         s1_found      ,
+    input         s1_v          ,
     // tlb p
     output        es_inst_tlbp,
     input         ms_inst_mtc0,
@@ -144,7 +147,8 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {rd               ,  //120:116
+assign es_to_ms_bus = {refill && (ex_code == `TLBL),  //121:121
+                       rd               ,  //120:116
                        es_inst_tlbr     ,  //115:115
                        es_inst_tlbwi    ,  //114:114      
                        es_inst_mfc0     ,  //113:113
@@ -227,8 +231,9 @@ assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX)        ? ds_to_es_bus_r[150
                  (of_flag != 3'b0)                          ? `OVERFLOW : 
                  BadAddr_R                                  ? `ADEL     :
                  BadAddr_W                                  ? `ADES     :
-                 mem_access && ~unmapped &&(m_ex != `NO_EX) ? m_ex      :
-                                                              ds_to_es_bus_r[150:146];
+                 ~s1_found && ~unmapped && es_load_op       ? `TLBL     :
+                                                              `NO_EX;
+                    
 
 // HI LO reg
 reg [31:0] HI;

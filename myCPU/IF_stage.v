@@ -29,8 +29,9 @@ module if_stage(
     input                          ERET             ,
     input  [31:0]                  cp0_epc          ,
     input  [ 3:0]                  ex_word          ,
-    input                          tlb_inv        ,
-    input  [31:0]                  tlb_pc
+    input                          tlb_inv          ,
+    input  [31:0]                  tlb_pc           ,
+    input                          refill
 );
 
 reg         fs_valid   ;
@@ -124,6 +125,7 @@ wire        WS_EX      ;
 reg         WS_EX_reg  ;
 reg         tlb_inv_reg;
 reg  [31:0] tlb_pc_reg ;
+reg         refill_reg ;
 wire [31:0] fs_inst    ;
 reg  [31:0] fs_pc      ;
 wire [ 4:0] ex_code    ;
@@ -166,6 +168,15 @@ always @ (posedge clk) begin
         tlb_pc_reg  <= 32'b0;
     end
 end
+always @ (posedge clk) begin
+    if (reset) begin
+        refill_reg <= 1'b0;
+    end else if (refill && ~ pre_fs_ready_go_flag) begin
+        refill_reg <= 1'b1;
+    end else if (pre_fs_ready_go && fs_allowin) begin
+        refill_reg <= 1'b0;
+    end
+end
 
 // pre-IF stage
 wire   pre_fs_ready_go     ;
@@ -174,7 +185,7 @@ wire   pre_fs_ready_go_flag;
 assign pre_fs_ready_go_flag = pre_fs_ready_go || pre_fs_ready_go_reg;
 assign to_fs_valid  = ~reset && pre_fs_ready_go_flag;
 assign seq_pc       = fs_pc + 3'h4                  ;
-assign nextpc       = (WS_EX || WS_EX_reg) && ~(tlb_inv || tlb_inv_reg) ? 32'hbfc00380                                   : 
+assign nextpc       = (WS_EX || WS_EX_reg) && ~(tlb_inv || tlb_inv_reg) ? ((refill || refill_reg) ? 32'hbfc00200 : 32'hbfc00380 ) : 
                       tlb_inv || tlb_inv_reg ? ((tlb_pc != 32'b0) ? tlb_pc : tlb_pc_reg)                                 :
                       ERET  || ERET_reg      ? (ERET ? cp0_epc : cp0_epc_reg)                                            :
                       is_slot_reg            ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 

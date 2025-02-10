@@ -68,7 +68,9 @@ wire        ms_inst_mfc0 ;
 wire        ms_inst_tlbwi;
 wire        ms_inst_tlbr ;
 wire [ 4:0] rd           ;
-assign {rd             ,  //120:116
+wire        refill       ;
+assign {refill         ,  //121:121
+        rd             ,  //120:116
         ms_inst_tlbr   ,  //115:115
         ms_inst_tlbwi  ,  //114:114
         ms_inst_mfc0   ,  //113:113
@@ -103,7 +105,8 @@ assign MEM_dest  = ms_dest & {5{ms_valid}};
 assign inst_mfc0 = ms_inst_mfc0;
 assign inst_mtc0 = ms_inst_mtc0 && ms_valid;
 
-assign ms_to_ws_bus = {rd             ,  //118:114
+assign ms_to_ws_bus = {refill         ,  //119:119
+                       rd             ,  //118:114
                        ms_inst_tlbr   ,  //113:113
                        ms_inst_tlbwi  ,  //112:112
                        ms_inst_mfc0   ,  //111:111

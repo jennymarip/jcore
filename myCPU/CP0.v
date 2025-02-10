@@ -66,7 +66,7 @@ assign d1    = cp0_EnrtyLo1_D1  ;
 assign v1    = cp0_EnrtyLo1_V1  ;
 
 wire   ex                          ;
-assign ex     = (ex_code != `NO_EX);
+assign ex     = (ex_code != `NO_EX) && (ex_code != `TLB_INV);
 assign cause  = cp0_cause          ;
 assign status = cp0_status         ;
 

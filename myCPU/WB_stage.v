@@ -26,6 +26,7 @@ module wb_stage(
     output        ERET            ,
     output        tlb_inv         ,
     output [31:0] tlb_pc          ,
+    output        refill          ,
     // tlbp
     input         es_inst_tlbp    ,
     input         s1_found        ,
@@ -80,14 +81,16 @@ wire        ws_inst_mfc0 ;
 wire        ws_inst_tlbwi;
 wire        ws_inst_tlbr ;
 wire [ 4:0] rd           ;
-assign {rd             ,  //118:114
+wire        refill       ;
+assign {refill         ,  //119:119
+        rd             ,  //118:114
         ws_inst_tlbr   ,  //113:113
         ws_inst_tlbwi  ,  //112:112
         ws_inst_mfc0   ,  //111:111
         ws_inst_mtc0   ,  //110:110
         pc_error       ,  //109:109
         BadVAddr          //108: 77
-       } = ms_to_ws_bus_r[117:77];
+       } = ms_to_ws_bus_r[119:77];
 assign {eret           ,  //71:71
         slot           ,  //70:70
         ws_gr_we       ,  //69:69

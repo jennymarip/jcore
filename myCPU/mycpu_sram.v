@@ -100,7 +100,8 @@ if_stage if_stage(
     .cp0_epc          (cp0_epc          ),
     .ex_word          (ex_word          ),
     .tlb_inv          (tlb_inv          ),
-    .tlb_pc           (tlb_pc           )
+    .tlb_pc           (tlb_pc           ),
+    .refill           (ws_refill        )
 );
 wire [ 3:0]               dm_word     ;
 wire [ `LD_WORD_LEN -1:0] ld_word     ;
@@ -171,9 +172,9 @@ wire        ws_inst_mtc0  ;
 wire        ms_inst_mtc0  ;
 /* d mmu */
 wire [31:0] d_vaddr;
-wire [ 1:0] w_or_r ;
+wire        w_or_r ;
 wire [31:0] d_paddr;
-wire [ 4:0] d_m_ex ;
+wire [ 4:0] m_ex   ;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -188,10 +189,11 @@ exe_stage exe_stage(
     .es_to_ms_valid (es_to_ms_valid ),
     .es_to_ms_bus   (es_to_ms_bus   ),
     // mmu interface
-    .vaddr  (d_vaddr),
-    .w_or_r (w_or_r ),
-    .paddr  (d_paddr),
-    .m_ex   (d_m_ex ),
+    .vaddr  (d_vaddr ),
+    .w_or_r (w_or_r  ),
+    .paddr  (d_paddr ),
+    .m_ex   (m_ex    ),
+    .refill (d_refill),
     // data sram interface
     .data_sram_en     (data_sram_req    ),
     .data_sram_wr     (data_sram_wr     ),
@@ -227,6 +229,8 @@ exe_stage exe_stage(
     .MS_ERET        (MS_ERET        ),
     .ES_ERET        (ES_ERET        ),
     .of_test        (of_test        ),
+    .s1_found       (s1_found       ),
+    .s1_v           (s1_v           ),
     // tlbp
     .es_inst_tlbp   (es_inst_tlbp   ),
     .ms_inst_mtc0   (ms_inst_mtc0   ),
@@ -266,8 +270,9 @@ mem_stage mem_stage(
     .MS_ERET        (MS_ERET        ),
     .MS_EX          (MS_EX          )
 );
-wire        tlb_inv;
-wire [31:0] tlb_pc ;
+wire        tlb_inv  ;
+wire [31:0] tlb_pc   ;
+wire        ws_refill;
 // WB stage
 wb_stage wb_stage(
     .clk            (clk            ),
@@ -295,6 +300,7 @@ wb_stage wb_stage(
     .ERET             (ERET             ),
     .tlb_inv          (tlb_inv          ),
     .tlb_pc           (tlb_pc           ),
+    .refill           (ws_refill        ),
     // tlbp
     .es_inst_tlbp     (es_inst_tlbp     ),
     .s1_found         (s1_found         ),
@@ -380,11 +386,13 @@ i_mmu i_mmu(
 /* d_mmu */
 wire [18:0] s1_vpn2_mmu;
 wire        s1_odd_page;
+wire        d_refill   ;
 d_mmu d_mmu(
-    .vaddr  (d_vaddr),
-    .w_or_r (w_or_r ),
-    .paddr  (d_paddr),
-    .excode (d_m_ex ),
+    .vaddr  (d_vaddr ),
+    .w_or_r (w_or_r  ),
+    .paddr  (d_paddr ),
+    .excode (m_ex    ),
+    .refill (d_refill),
     // tlb interface
     .s1_vpn2     (s1_vpn2_mmu),
     .s1_odd_page (s1_odd_page),
