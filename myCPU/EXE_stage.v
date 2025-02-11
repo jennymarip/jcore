@@ -55,6 +55,7 @@ module exe_stage(
     input  [ 2:0] of_test       ,// single hot
     input         s1_found      ,
     input         s1_v          ,
+    input         s1_d          ,
     // tlb p
     output        es_inst_tlbp,
     input         ms_inst_mtc0,
@@ -147,7 +148,7 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {refill && (ex_code == `TLBL),  //121:121
+assign es_to_ms_bus = {refill && ((ex_code == `TLBL) || (ex_code == `TLBS)),  //121:121
                        rd               ,  //120:116
                        es_inst_tlbr     ,  //115:115
                        es_inst_tlbwi    ,  //114:114      
@@ -231,8 +232,11 @@ assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX)          ? ds_to_es_bus_r[1
                  (of_flag != 3'b0)                            ? `OVERFLOW : 
                  BadAddr_R                                    ? `ADEL     :
                  BadAddr_W                                    ? `ADES     :
-                 ~s1_found && ~unmapped && es_load_op         ? `TLBL     :
-                 s1_found && ~unmapped && es_load_op && ~s1_v ? `TLBL     : 
+                 ~s1_found && ~unmapped && es_load_op         ? `TLBL     : // load refill
+                 s1_found && ~unmapped && es_load_op && ~s1_v ? `TLBL     : // load inv
+                 ~s1_found && ~unmapped && es_mem_we          ? `TLBS     : // store refill
+                 s1_found && ~unmapped && es_mem_we && ~s1_v  ? `TLBS     : // store inv
+                 s1_found && ~unmapped && es_mem_we && s1_v && ~s1_d ? `Mod : // mod
                                                                 `NO_EX;
                     
 

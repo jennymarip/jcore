@@ -231,6 +231,7 @@ exe_stage exe_stage(
     .of_test        (of_test        ),
     .s1_found       (s1_found       ),
     .s1_v           (s1_v           ),
+    .s1_d           (s1_d           ),
     // tlbp
     .es_inst_tlbp   (es_inst_tlbp   ),
     .ms_inst_mtc0   (ms_inst_mtc0   ),
