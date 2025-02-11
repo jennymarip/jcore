@@ -17,6 +17,7 @@ module mem_stage(
     input  [31:0]                  data_sram_rdata  ,
     //to ds data dependence
     output                         inst_mfc0     ,
+    output                         inst_mtc0     ,
     output [ 4:0]                  MEM_dest      ,
     //forward
     output [31:0]                  MEM_dest_data ,
@@ -55,17 +56,23 @@ wire        ms_res_from_mem;
 wire        ms_gr_we;
 wire [ 4:0] ms_dest;
 wire [31:0] ms_alu_result;
-wire [31:0] ms_pc       ;
-wire        slot        ;
-wire        eret        ;
-wire [ 4:0] ex_code     ;
-wire [31:0] BadVAddr    ;
-wire        pc_error    ;
-wire        mem_access  ;
-wire        ms_inst_mtc0;
-wire        ms_inst_mfc0;
-wire [ 4:0] rd          ;
-assign {rd             ,  //118:114
+wire [31:0] ms_pc        ;
+wire        slot         ;
+wire        eret         ;
+wire [ 4:0] ex_code      ;
+wire [31:0] BadVAddr     ;
+wire        pc_error     ;
+wire        mem_access   ;
+wire        ms_inst_mtc0 ;
+wire        ms_inst_mfc0 ;
+wire        ms_inst_tlbwi;
+wire        ms_inst_tlbr ;
+wire [ 4:0] rd           ;
+wire        refill       ;
+assign {refill         ,  //121:121
+        rd             ,  //120:116
+        ms_inst_tlbr   ,  //115:115
+        ms_inst_tlbwi  ,  //114:114
         ms_inst_mfc0   ,  //113:113
         ms_inst_mtc0   ,  //112:112
         mem_access     ,  //111:111
@@ -96,8 +103,12 @@ wire [31:0] ms_final_result;
 
 assign MEM_dest  = ms_dest & {5{ms_valid}};
 assign inst_mfc0 = ms_inst_mfc0;
+assign inst_mtc0 = ms_inst_mtc0 && ms_valid;
 
-assign ms_to_ws_bus = {rd             ,  //116:112
+assign ms_to_ws_bus = {refill         ,  //119:119
+                       rd             ,  //118:114
+                       ms_inst_tlbr   ,  //113:113
+                       ms_inst_tlbwi  ,  //112:112
                        ms_inst_mfc0   ,  //111:111
                        ms_inst_mtc0   ,  //110:110
                        pc_error       ,  //109:109

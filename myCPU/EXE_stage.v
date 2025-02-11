@@ -12,6 +12,11 @@ module exe_stage(
     //to ms
     output                         es_to_ms_valid,
     output [`ES_TO_MS_BUS_WD -1:0] es_to_ms_bus  ,
+    // mmu interface
+    output [31:0] vaddr ,
+    output        w_or_r,
+    input  [31:0] paddr ,
+    input         refill,
     // data sram interface
     output        data_sram_en     ,
     output        data_sram_wr     ,
@@ -46,7 +51,14 @@ module exe_stage(
     input         ERET          ,
     input         MS_ERET       ,
     output        ES_ERET       ,
-    input  [ 2:0] of_test       // single hot
+    input  [ 2:0] of_test       ,// single hot
+    input         s1_found      ,
+    input         s1_v          ,
+    input         s1_d          ,
+    // tlb p
+    output        es_inst_tlbp,
+    input         ms_inst_mtc0,
+    input         ws_inst_mtc0
 ); 
 
 reg         es_valid      ;
@@ -96,7 +108,19 @@ wire        eret               ;
 wire        pc_error           ;
 wire        es_inst_mtc0       ;
 wire        es_inst_mfc0       ;
+wire        es_inst_tlbwi      ;
+wire        es_inst_tlbr       ;
+wire        fs_refill          ;
 wire        mem_access         ;
+
+assign {fs_refill    ,
+        es_inst_tlbr ,
+        es_inst_tlbwi,
+        es_inst_tlbp ,
+        es_inst_mfc0 ,
+        es_inst_mtc0 ,
+        pc_error
+       } = ds_to_es_bus_r[189:183];
 assign {eret               ,  //145:145
         slot               ,  //144:144
         rd                 ,  //143:139
@@ -125,7 +149,10 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {rd               ,  //118:114      
+assign es_to_ms_bus = {fs_refill || ((es_load_op || es_mem_we) && refill && ((ex_code == `TLBL) || (ex_code == `TLBS))),  //121:121
+                       rd               ,  //120:116
+                       es_inst_tlbr     ,  //115:115
+                       es_inst_tlbwi    ,  //114:114      
                        es_inst_mfc0     ,  //113:113
                        es_inst_mtc0     ,  //112:112
                        mem_access       ,  //111:111
@@ -146,7 +173,9 @@ assign inst_mfc0 = es_inst_mfc0;
 reg [ 2:0] OF_TEST;
 
 assign es_ready_go    = data_sram_req ? ((data_sram_en && data_sram_addr_ok) || data_sram_en_and_ok) : 
-                                        (~div_unfinished | ES_EX | MS_EX | WS_EX);
+                                        (~div_unfinished | ES_EX | MS_EX | WS_EX) && 
+                                        ~(es_inst_tlbp && ms_inst_mtc0)           &&
+                                        ~(es_inst_tlbp && ws_inst_mtc0);
 assign es_allowin     = !es_valid || es_ready_go && ms_allowin;
 assign es_to_ms_valid =  es_valid && es_ready_go;
 always @(posedge clk) begin
@@ -198,11 +227,19 @@ assign of_flag = ((OF_TEST_ == 3'b001) & ((sign1 == sign2) & (sign1 != sign3))) 
                  ((OF_TEST_ == 3'b010) & ((sign1 == sign2) & (sign1 != sign3))) ? 3'b010 :
                  ((OF_TEST_ == 3'b100) & ((sign1 != sign2) & (sign1 != sign3))) ? 3'b100 :
                                                                                   3'b0;
-assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX) ? ds_to_es_bus_r[150:146]:
-                 (of_flag != 3'b0)                   ? `OVERFLOW : 
-                 BadAddr_R                           ? `ADEL     :
-                 BadAddr_W                           ? `ADES     :
-                                                       ds_to_es_bus_r[150:146];
+wire   unmapped;
+assign unmapped = es_alu_result[31] && (es_alu_result[30:28] <= 3'b100);
+assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX)          ? ds_to_es_bus_r[150:146]:
+                 (of_flag != 3'b0)                            ? `OVERFLOW : 
+                 BadAddr_R                                    ? `ADEL     :
+                 BadAddr_W                                    ? `ADES     :
+                 ~s1_found && ~unmapped && es_load_op         ? `TLBL     : // load refill
+                 s1_found && ~unmapped && es_load_op && ~s1_v ? `TLBL     : // load inv
+                 ~s1_found && ~unmapped && es_mem_we          ? `TLBS     : // store refill
+                 s1_found && ~unmapped && es_mem_we && ~s1_v  ? `TLBS     : // store inv
+                 s1_found && ~unmapped && es_mem_we && s1_v && ~s1_d ? `Mod : // mod
+                                                                `NO_EX;
+                    
 
 // HI LO reg
 reg [31:0] HI;
@@ -380,9 +417,7 @@ assign      BadAddr_W = (SW & (LDB != 2'b0) ) | (sh & LDB[0]);
 assign      BadVAddr  = (ds_to_es_bus_r[182:151] != 32'b0) ? ds_to_es_bus_r[182:151] :
                                    (BadAddr_R | BadAddr_W) ? data_sram_addr          :
                                                              32'b0;
-assign      pc_error     = ds_to_es_bus_r[183];
-assign      es_inst_mtc0 = ds_to_es_bus_r[184];
-assign      es_inst_mfc0 = ds_to_es_bus_r[185];
+
 // R / W
 wire [31:0]  st_data;
 assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
@@ -396,6 +431,10 @@ assign st_data = sb ? {4{es_rt_value[ 7:0]}} :
                  (swr & (LDB == 2'b10))?{es_rt_value[15:0], 16'b0} :
                  (swr & (LDB == 2'b11))?{es_rt_value[7:0], 24'b0} :
                  es_rt_value[31:0];
+// mmu 
+assign vaddr  = es_alu_result;
+assign w_or_r = es_mem_we    ;
+
 // data sram interface
 wire   data_sram_req;
 assign data_sram_req = (es_load_op || es_mem_we) && es_valid && ~ES_EX;
@@ -406,11 +445,9 @@ always @(posedge clk) begin
     // set data_sram_en_reg
     if (reset) begin
         data_sram_en_reg    <= 1'b0;
-    end
-    else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
+    end else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
         data_sram_en_reg    <= data_sram_req;
-    end
-    else if (data_sram_addr_ok && data_sram_en) begin
+    end else if (data_sram_addr_ok && data_sram_en) begin
         data_sram_en_reg    <= 1'b0;
     end
     // set data_sram_en_and_ok
@@ -447,7 +484,7 @@ assign data_sram_wstrb = es_mem_we&&es_valid & ~BadAddr_W & ~MS_ERET & ~ERET ?
                             4'b1111
                          ) :
                          4'h0;
-assign data_sram_addr  = es_alu_result;
+assign data_sram_addr  = paddr;
 assign data_sram_wdata = st_data;
 
 assign LDB             = es_alu_result[ 1:0] & {2{lb | lbu | lh | lhu | lwl | lwr | sb | sh | swl | swr | _LW | SW | sh}};

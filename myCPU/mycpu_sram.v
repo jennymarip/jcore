@@ -65,6 +65,10 @@ wire ES_EX;
 // EX word
 wire [3:0] ex_word;
 assign     ex_word = {DS_EX, ES_EX, MS_EX, WS_EX};
+// i_mmu
+wire [31:0] i_vaddr;
+wire [31:0] i_paddr;
+
 // IF stage
 if_stage if_stage(
     .clk              (clk              ),
@@ -76,6 +80,11 @@ if_stage if_stage(
     //outputs
     .fs_to_ds_valid   (fs_to_ds_valid   ),
     .fs_to_ds_bus     (fs_to_ds_bus     ),
+    // mmu
+    .vaddr    (i_vaddr ),
+    .paddr    (i_paddr ),
+    .s0_found (s0_found),
+    .s0_v     (s0_v    ),
     // inst sram interface
     .inst_sram_en           (inst_sram_req         ),
     .inst_sram_wr           (inst_sram_wr          ),
@@ -90,7 +99,10 @@ if_stage if_stage(
     // EX
     .ERET             (ERET             ),
     .cp0_epc          (cp0_epc          ),
-    .ex_word          (ex_word          )
+    .ex_word          (ex_word          ),
+    .tlb_inv          (tlb_inv          ),
+    .tlb_pc           (tlb_pc           ),
+    .refill           (ws_refill        )
 );
 wire [ 3:0]               dm_word     ;
 wire [ `LD_WORD_LEN -1:0] ld_word     ;
@@ -155,6 +167,14 @@ wire [`LD_WORD_LEN-1:0] ld_word_;
 wire [31:0] rt_value      ;
 wire        MS_EX         ;
 wire        MS_ERET       ;
+wire        es_inst_tlbp  ;
+wire [31:0] cp0_EntryHi   ;
+wire        ws_inst_mtc0  ;
+wire        ms_inst_mtc0  ;
+/* d mmu */
+wire [31:0] d_vaddr;
+wire        w_or_r ;
+wire [31:0] d_paddr;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -168,6 +188,11 @@ exe_stage exe_stage(
     //to ms
     .es_to_ms_valid (es_to_ms_valid ),
     .es_to_ms_bus   (es_to_ms_bus   ),
+    // mmu interface
+    .vaddr  (d_vaddr ),
+    .w_or_r (w_or_r  ),
+    .paddr  (d_paddr ),
+    .refill (d_refill),
     // data sram interface
     .data_sram_en     (data_sram_req    ),
     .data_sram_wr     (data_sram_wr     ),
@@ -202,7 +227,14 @@ exe_stage exe_stage(
     .ERET           (ERET           ),
     .MS_ERET        (MS_ERET        ),
     .ES_ERET        (ES_ERET        ),
-    .of_test        (of_test        )
+    .of_test        (of_test        ),
+    .s1_found       (s1_found       ),
+    .s1_v           (s1_v           ),
+    .s1_d           (s1_d           ),
+    // tlbp
+    .es_inst_tlbp   (es_inst_tlbp   ),
+    .ms_inst_mtc0   (ms_inst_mtc0   ),
+    .ws_inst_mtc0   (ws_inst_mtc0   )
 );
 // MEM stage
 mem_stage mem_stage(
@@ -222,6 +254,7 @@ mem_stage mem_stage(
     .data_sram_rdata  (data_sram_rdata  ),
     //data dependence
     .inst_mfc0      (ms_inst_mfc0   ),
+    .inst_mtc0      (ms_inst_mtc0   ),
     .MEM_dest       (MEM_dest       ),
     //forward
     .MEM_dest_data  (MEM_dest_data  ),
@@ -237,6 +270,9 @@ mem_stage mem_stage(
     .MS_ERET        (MS_ERET        ),
     .MS_EX          (MS_EX          )
 );
+wire        tlb_inv  ;
+wire [31:0] tlb_pc   ;
+wire        ws_refill;
 // WB stage
 wb_stage wb_stage(
     .clk            (clk            ),
@@ -261,7 +297,162 @@ wb_stage wb_stage(
     // EX
     .WS_EX            (WS_EX            ),
     .cp0_epc          (cp0_epc          ),
-    .ERET             (ERET             )
+    .ERET             (ERET             ),
+    .tlb_inv          (tlb_inv          ),
+    .tlb_pc           (tlb_pc           ),
+    .refill           (ws_refill        ),
+    // tlbp
+    .es_inst_tlbp     (es_inst_tlbp     ),
+    .s1_found         (s1_found         ),
+    .s1_index         (s1_index         ),
+    .cp0_EntryHi      (cp0_EntryHi      ),
+    .inst_mtc0        (ws_inst_mtc0     ),
+    .tlbwi_we         (we               ),
+    .tlbwi_index      (w_index          ),
+    .tlbwi_vpn2       (w_vpn2           ),
+    .tlbwi_asid       (w_asid           ),
+    .tlbwi_g          (w_g              ),
+    .tlbwi_pfn0       (w_pfn0           ),
+    .tlbwi_c0         (w_c0             ),
+    .tlbwi_d0         (w_d0             ),
+    .tlbwi_v0         (w_v0             ),
+    .tlbwi_pfn1       (w_pfn1           ),
+    .tlbwi_c1         (w_c1             ), 
+    .tlbwi_d1         (w_d1             ),
+    .tlbwi_v1         (w_v1             ),
+    .tlbr_index       (r_index          ),
+    .tlbr_vpn2        (r_vpn2           ),
+    .tlbr_asid        (r_asid           ),
+    .tlbr_g           (r_g              ),
+    .tlbr_pfn0        (r_pfn0           ),
+    .tlbr_c0          (r_c0             ),
+    .tlbr_d0          (r_d0             ),
+    .tlbr_v0          (r_v0             ),
+    .tlbr_pfn1        (r_pfn1           ),
+    .tlbr_c1          (r_c1             ), 
+    .tlbr_d1          (r_d1             ),
+    .tlbr_v1          (r_v1             ),
+    // mmu 
+    .ASID             (asid             )
+);
+wire [18:0] s1_vpn2;
+wire [ 7:0] s1_asid;
+wire [19:0] s1_pfn ;
+wire        s1_d, s1_v;
+wire [18:0] s0_vpn2;
+wire [19:0] s0_pfn ;
+wire        s0_d, s0_v;
+wire s1_found, s0_found;
+wire [ 3:0] s1_index;
+assign s1_vpn2 = es_inst_tlbp ? cp0_EntryHi[31:13] : s1_vpn2_mmu;
+assign s1_asid = es_inst_tlbp ? cp0_EntryHi[ 7: 0] : asid       ;
+wire [ 3:0] w_index;
+wire [18:0] w_vpn2 ;
+wire [ 7:0] w_asid ;
+wire        w_g, we;
+wire [19:0] w_pfn0 ;
+wire [ 2:0] w_c0   ;
+wire        w_d0, w_v0;
+wire [19:0] w_pfn1 ;
+wire [ 2:0] w_c1   ;
+wire        w_d1, w_v1;
+
+wire [ 3:0] r_index;
+wire [18:0] r_vpn2 ;
+wire [ 7:0] r_asid ;
+wire        r_g    ;
+wire [19:0] r_pfn0 ;
+wire [ 2:0] r_c0   ;
+wire        r_d0, r_v0;
+wire [19:0] r_pfn1 ;
+wire [ 2:0] r_c1   ;
+wire        r_d1, r_v1;
+
+wire [ 7:0] asid;
+// mmu
+/* i_mmu */
+wire s0_odd_page;
+i_mmu i_mmu(
+    .vaddr  (i_vaddr),
+    .paddr  (i_paddr),
+    // tlb interface
+    .s0_vpn2     (s0_vpn2    ),
+    .s0_odd_page (s0_odd_page),
+    .s0_found    (s0_found   ),
+    .s0_pfn      (s0_pfn     ),
+    .s0_d        (s0_d       ),
+    .s0_v        (s0_v       )
+);
+/* d_mmu */
+wire [18:0] s1_vpn2_mmu;
+wire        s1_odd_page;
+wire        d_refill   ;
+d_mmu d_mmu(
+    .vaddr  (d_vaddr ),
+    .w_or_r (w_or_r  ),
+    .paddr  (d_paddr ),
+    .refill (d_refill),
+    // tlb interface
+    .s1_vpn2     (s1_vpn2_mmu),
+    .s1_odd_page (s1_odd_page),
+    .s1_found    (s1_found   ),
+    .s1_pfn      (s1_pfn     ),
+    .s1_d        (s1_d       ),
+    .s1_v        (s1_v       )
+);
+
+
+// tlb
+tlb #(.TLBNUM(16)) tlb
+(
+    .clk (clk),
+    // search port 0
+    .s0_vpn2     (s0_vpn2    ),
+    .s0_odd_page (s0_odd_page),
+    .s0_asid     (asid       ),
+    .s0_found    (s0_found   ),
+    .s0_index    (s0_index   ),
+    .s0_pfn      (s0_pfn     ),
+    .s0_c        (s0_c       ),
+    .s0_d        (s0_d       ),
+    .s0_v        (s0_v       ),
+    // search port 1
+    .s1_vpn2     (s1_vpn2    ),
+    .s1_odd_page (s1_odd_page),
+    .s1_asid     (s1_asid    ),
+    .s1_found    (s1_found   ),
+    .s1_index    (s1_index   ),
+    .s1_pfn      (s1_pfn     ),
+    .s1_c        (s1_c       ),
+    .s1_d        (s1_d       ),
+    .s1_v        (s1_v       ),
+    // write port
+    .we      (we     ),
+    .w_index (w_index),
+    .w_vpn2  (w_vpn2 ),
+    .w_asid  (w_asid ),
+    .w_g     (w_g    ),
+    .w_pfn0  (w_pfn0 ),
+    .w_c0    (w_c0   ),
+    .w_d0    (w_d0   ),
+    .w_v0    (w_v0   ),
+    .w_pfn1  (w_pfn1 ),
+    .w_c1    (w_c1   ),
+    .w_d1    (w_d1   ),
+    .w_v1    (w_v1   ),
+    // read port
+    .r_index (r_index),
+    .r_vpn2  (r_vpn2 ),
+    .r_asid  (r_asid ),
+    .r_g     (r_g    ),
+    .r_pfn0  (r_pfn0 ),
+    .r_c0    (r_c0   ),
+    .r_d0    (r_d0   ),
+    .r_v0    (r_v0   ),
+    .r_pfn1  (r_pfn1 ),
+    .r_c1    (r_c1   ),
+    .r_d1    (r_d1   ),
+    .r_v1    (r_v1   )
 );
 
 endmodule
