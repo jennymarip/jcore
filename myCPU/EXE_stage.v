@@ -16,7 +16,6 @@ module exe_stage(
     output [31:0] vaddr ,
     output        w_or_r,
     input  [31:0] paddr ,
-    input  [ 4:0] m_ex  ,
     input         refill,
     // data sram interface
     output        data_sram_en     ,

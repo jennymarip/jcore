@@ -174,7 +174,6 @@ wire        ms_inst_mtc0  ;
 wire [31:0] d_vaddr;
 wire        w_or_r ;
 wire [31:0] d_paddr;
-wire [ 4:0] m_ex   ;
 // EXE stage
 exe_stage exe_stage(
     .clk            (clk            ),
@@ -192,7 +191,6 @@ exe_stage exe_stage(
     .vaddr  (d_vaddr ),
     .w_or_r (w_or_r  ),
     .paddr  (d_paddr ),
-    .m_ex   (m_ex    ),
     .refill (d_refill),
     // data sram interface
     .data_sram_en     (data_sram_req    ),
@@ -393,7 +391,6 @@ d_mmu d_mmu(
     .vaddr  (d_vaddr ),
     .w_or_r (w_or_r  ),
     .paddr  (d_paddr ),
-    .excode (m_ex    ),
     .refill (d_refill),
     // tlb interface
     .s1_vpn2     (s1_vpn2_mmu),
