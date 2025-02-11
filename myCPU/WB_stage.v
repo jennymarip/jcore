@@ -162,6 +162,7 @@ assign cp0_raddr = ws_inst_mfc0 ? rd           :
                    eret         ? `CP0_EPC     :
                    es_inst_tlbp ? `CP0_EnrtyHi :
                    ws_inst_tlbr ? `CP0_INDEX   :
+
                                   5'b11111;
 assign cp0_EntryHi = cp0_rdata;
 assign inst_mtc0 = ws_inst_mtc0 && ws_valid;
