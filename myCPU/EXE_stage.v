@@ -227,12 +227,13 @@ assign of_flag = ((OF_TEST_ == 3'b001) & ((sign1 == sign2) & (sign1 != sign3))) 
                                                                                   3'b0;
 wire   unmapped;
 assign unmapped = es_alu_result[31] && (es_alu_result[30:28] <= 3'b100);
-assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX)        ? ds_to_es_bus_r[150:146]:
-                 (of_flag != 3'b0)                          ? `OVERFLOW : 
-                 BadAddr_R                                  ? `ADEL     :
-                 BadAddr_W                                  ? `ADES     :
-                 ~s1_found && ~unmapped && es_load_op       ? `TLBL     :
-                                                              `NO_EX;
+assign ex_code = (ds_to_es_bus_r[150:146] != `NO_EX)          ? ds_to_es_bus_r[150:146]:
+                 (of_flag != 3'b0)                            ? `OVERFLOW : 
+                 BadAddr_R                                    ? `ADEL     :
+                 BadAddr_W                                    ? `ADES     :
+                 ~s1_found && ~unmapped && es_load_op         ? `TLBL     :
+                 s1_found && ~unmapped && es_load_op && ~s1_v ? `TLBL     : 
+                                                                `NO_EX;
                     
 
 // HI LO reg

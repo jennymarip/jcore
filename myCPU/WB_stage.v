@@ -30,7 +30,7 @@ module wb_stage(
     // tlbp
     input         es_inst_tlbp    ,
     input         s1_found        ,
-    input         s1_index        ,
+    input  [ 3:0] s1_index        ,
     output [31:0] cp0_EntryHi     ,
     output        inst_mtc0       ,
     output        tlbwi_we        ,
