@@ -110,15 +110,17 @@ wire        es_inst_mtc0       ;
 wire        es_inst_mfc0       ;
 wire        es_inst_tlbwi      ;
 wire        es_inst_tlbr       ;
+wire        fs_refill          ;
 wire        mem_access         ;
 
-assign {es_inst_tlbr ,
+assign {fs_refill    ,
+        es_inst_tlbr ,
         es_inst_tlbwi,
         es_inst_tlbp ,
         es_inst_mfc0 ,
         es_inst_mtc0 ,
         pc_error
-       } = ds_to_es_bus_r[188:183];
+       } = ds_to_es_bus_r[189:183];
 assign {eret               ,  //145:145
         slot               ,  //144:144
         rd                 ,  //143:139
@@ -147,7 +149,7 @@ wire [31:0] es_final_result;
 wire        es_res_from_mem;
 
 assign es_res_from_mem = es_load_op;
-assign es_to_ms_bus = {refill && ((ex_code == `TLBL) || (ex_code == `TLBS)),  //121:121
+assign es_to_ms_bus = {fs_refill || ((es_load_op || es_mem_we) && refill && ((ex_code == `TLBL) || (ex_code == `TLBS))),  //121:121
                        rd               ,  //120:116
                        es_inst_tlbr     ,  //115:115
                        es_inst_tlbwi    ,  //114:114      

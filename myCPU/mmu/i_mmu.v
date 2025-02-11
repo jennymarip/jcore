@@ -1,7 +1,6 @@
 module i_mmu(
     input  [31:0] vaddr ,
     output [31:0] paddr ,
-    output [ 4:0] excode,
     // tlb interface
     output [18:0] s0_vpn2    ,
     output        s0_odd_page,
@@ -19,7 +18,4 @@ wire   unmapped;
 assign unmapped = vaddr[31] && (vaddr[30:28] <= 3'b100);
 assign paddr = unmapped ? vaddr : {s0_pfn, vaddr[11:0]};
 
-// ex
-assign excode = (~s0_found || s0_found && ~s0_v) ? 5'b00010 :
-                                                   5'b11111;
 endmodule

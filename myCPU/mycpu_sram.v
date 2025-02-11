@@ -68,7 +68,7 @@ assign     ex_word = {DS_EX, ES_EX, MS_EX, WS_EX};
 // i_mmu
 wire [31:0] i_vaddr;
 wire [31:0] i_paddr;
-wire [ 4:0] i_ex   ;
+
 // IF stage
 if_stage if_stage(
     .clk              (clk              ),
@@ -81,9 +81,10 @@ if_stage if_stage(
     .fs_to_ds_valid   (fs_to_ds_valid   ),
     .fs_to_ds_bus     (fs_to_ds_bus     ),
     // mmu
-    .vaddr (i_vaddr),
-    .paddr (i_paddr),
-    .i_ex  (i_ex   ),
+    .vaddr    (i_vaddr ),
+    .paddr    (i_paddr ),
+    .s0_found (s0_found),
+    .s0_v     (s0_v    ),
     // inst sram interface
     .inst_sram_en           (inst_sram_req         ),
     .inst_sram_wr           (inst_sram_wr          ),
@@ -374,7 +375,6 @@ wire s0_odd_page;
 i_mmu i_mmu(
     .vaddr  (i_vaddr),
     .paddr  (i_paddr),
-    .excode (i_ex   ),
     // tlb interface
     .s0_vpn2     (s0_vpn2    ),
     .s0_odd_page (s0_odd_page),

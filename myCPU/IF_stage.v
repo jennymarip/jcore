@@ -11,9 +11,10 @@ module if_stage(
     output                         fs_to_ds_valid   ,
     output [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus     ,
     // mmu 
-    output [31:0]             vaddr,
-    input  [31:0]             paddr,
-    input  [ 4:0]             i_ex ,
+    output [31:0]             vaddr   ,
+    input  [31:0]             paddr   ,
+    input                     s0_found,
+    input                     s0_v    ,
     // inst sram interface
     output                    inst_sram_en          ,
     output                    inst_sram_wr          ,
@@ -132,16 +133,44 @@ wire [ 4:0] ex_code    ;
 wire [31:0] BadVAddr   ;
 wire        pc_error   ;
 wire        unmapped   ;
+/* tlb fs ex */
+wire [ 4:0] pre_fs_excode;
+assign pre_fs_excode = (pre_fs_refill || pre_fs_invalid) ? `TLBL :
+                                                           `NO_EX;
+wire pre_fs_refill, pre_fs_invalid; 
+assign pre_fs_refill  = ~unmapped && ~s0_found        ;
+assign pre_fs_invalid = ~unmapped && s0_found && ~s0_v;    
 
+reg [ 4:0] fs_ex_code   ;
+reg        fs_refill_reg;
+always @(posedge clk) begin
+    if (reset) begin
+        fs_ex_code <= `NO_EX;
+    end else if (pre_fs_ready_go_flag && fs_allowin) begin
+        fs_ex_code <= pre_fs_excode;
+    end else if (fs_ready_go && ds_allowin) begin
+        fs_ex_code <= `NO_EX;
+    end
+end
+always @(posedge clk) begin
+    if (reset) begin
+        fs_refill_reg <= 1'b0;
+    end else if (pre_fs_ready_go_flag && fs_allowin) begin
+        fs_refill_reg <= pre_fs_refill;
+    end else if (fs_ready_go && ds_allowin) begin
+        fs_refill_reg <= 1'b0;
+    end
+end
 assign unmapped = nextpc[31] && (nextpc[30:28] <= 3'b100); // 若不进行地址转换，则没有tlb异常
 assign WS_EX        = ex_word[0]                                               ;
 assign fs_inst      = inst_sram_rdata                                          ;
-assign ex_code      = (ex_word == 4'b0) && (fs_pc[1:0] != 2'b0) ? `ADEL :
-                      ~unmapped && (i_ex != `NO_EX)             ? i_ex  :
-                                                                 `NO_EX;
-assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0                       ;
-assign pc_error     = (ex_code == `ADEL)                                       ;
-assign fs_to_ds_bus = {is_slot_reg,
+assign ex_code      = (fs_ex_code != `NO_EX)                    ? fs_ex_code :
+                      (ex_word == 4'b0) && (fs_pc[1:0] != 2'b0) ? `ADEL      :
+                                                                  `NO_EX;
+assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0;
+assign pc_error     = (ex_code == `ADEL)                ;
+assign fs_to_ds_bus = {fs_refill_reg,
+                       is_slot_reg,
                        pc_error   ,
                        BadVAddr   ,
                        ex_code    ,
@@ -191,7 +220,7 @@ assign nextpc       = (WS_EX || WS_EX_reg) && ~(tlb_inv || tlb_inv_reg) ? ((refi
                       is_slot_reg            ? ((br_taken | br_taken_reg) ? (br_taken?br_target:br_target_reg) : seq_pc) : 
                                                seq_pc;
 
-assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok && addr_ok_valid);
+assign pre_fs_ready_go  = ~br_stall && (inst_sram_en && inst_sram_addr_ok && addr_ok_valid) || (pre_fs_excode != `NO_EX);
 always@ (posedge clk) begin
     if (reset) begin
         pre_fs_ready_go_reg <= 1'b0;
@@ -230,18 +259,15 @@ always @(posedge clk) begin
     // set fs_valid
     if (reset) begin
         fs_valid <= 1'b0;
-    end
-    else if (fs_allowin) begin
+    end else if (fs_allowin) begin
         fs_valid <= to_fs_valid;
-    end
-    else if (WS_EX) begin
+    end else if (WS_EX) begin
         fs_valid <= 1'b0;
     end
     // set fs_pc
     if (reset) begin
         fs_pc <= 32'hbfbffffc;  // trick: to make seq_pc be 0xbfc00000 during reset 
-    end
-    else if (to_fs_valid && fs_allowin || ERET) begin
+    end else if (to_fs_valid && fs_allowin || ERET) begin
         fs_pc <= nextpc;
     end
 end
@@ -252,8 +278,8 @@ assign vaddr = nextpc;
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 // 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
 wire   inst_sram_req;
-assign inst_sram_req = (branch_in_fs? 1'b1 :
-                                     fs_allowin && ~br_stall) || (WS_EX || WS_EX_reg);
+assign inst_sram_req = ((branch_in_fs? 1'b1 :
+                                     fs_allowin && ~br_stall) || (WS_EX || WS_EX_reg)) && (pre_fs_excode == `NO_EX);
 
 // inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
 reg    inst_sram_en_reg, inst_ready_reg;

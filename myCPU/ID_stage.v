@@ -68,16 +68,18 @@ wire [31                 :0] fs_pc         ;
 reg  [`FS_TO_DS_BUS_WD -1:0] fs_to_ds_bus_r;
 assign fs_pc = fs_to_ds_bus[31:0];
 
-wire [31:0] ds_inst ;
-wire [31:0] ds_pc   ;
-wire [31:0] BadVAddr;
-wire        pc_error;
-wire        slot    ;
+wire [31:0] ds_inst  ;
+wire [31:0] ds_pc    ;
+wire [31:0] BadVAddr ;
+wire        pc_error ;
+wire        slot     ;
+wire        fs_refill;
 assign {ds_inst,
         ds_pc  } = fs_to_ds_bus_r;
-assign {slot    ,
-        pc_error,
-        BadVAddr} = fs_to_ds_bus_r[102:69];
+assign {fs_refill,
+        slot     ,
+        pc_error ,
+        BadVAddr} = fs_to_ds_bus_r[103:69];
 
 wire        rf_we   ;
 wire [ 4:0] rf_waddr;
@@ -161,7 +163,8 @@ wire        eret   ;
 
 assign br_bus       = {is_branch, br_stall,br_taken,br_target};
 
-assign ds_to_es_bus = {inst_tlbr       ,  //188:188
+assign ds_to_es_bus = {fs_refill       ,  //189:189
+                       inst_tlbr       ,  //188:188
                        inst_tlbwi      ,  //187:187
                        inst_tlbp       ,  //186:186
                        inst_mfc0       ,  //185:185
@@ -409,12 +412,13 @@ assign br_target = (inst_beq || inst_bne || inst_bgez || inst_bgtz || inst_blez 
                   /*inst_jal*/                           {fs_pc[31:28], jidx[25:0], 2'b0};
 
 // EX
-assign ex_code = (ES_EX | MS_EX | WS_EX         ) ? `NO_EX   :
-                 (fs_to_ds_bus_r[68:64] == `ADEL) ? `ADEL    :
-                 inst_syscall                     ? `SYSCALL :
-                 inst_break                       ? `BREAK   :
-                 inst_no                          ? `RI      :
-                 ds_valid && tlb_inv              ? `TLB_INV :
+assign ex_code = (ES_EX | MS_EX | WS_EX         )  ? `NO_EX   :
+                 (fs_to_ds_bus_r[68:64] != `NO_EX) ? fs_to_ds_bus_r[68:64] :
+                 (fs_to_ds_bus_r[68:64] == `ADEL)  ? `ADEL    :
+                 inst_syscall                      ? `SYSCALL :
+                 inst_break                        ? `BREAK   :
+                 inst_no                           ? `RI      :
+                 ds_valid && tlb_inv               ? `TLB_INV :
                                                     fs_to_ds_bus_r[68:64];
 assign eret  = inst_eret   ;
 /* tlbwi 和tlbr 指令之后的第一条指令标记异常（不是真的异常） */

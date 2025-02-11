@@ -166,7 +166,8 @@ assign cp0_raddr = ws_inst_mfc0 ? rd           :
 assign cp0_EntryHi = cp0_rdata;
 assign inst_mtc0 = ws_inst_mtc0 && ws_valid;
 assign cp0_waddr   = WS_EX ? `CP0_EPC :  5'b11111;
-assign cp0_wdata   = WS_EX ? (pc_error ? BadVAddr : ws_pc) : 31'b0;
+assign cp0_wdata   = WS_EX ? (pc_error ? BadVAddr : ws_pc) :
+                             31'b0;
 
 // tlb
 wire [ 3:0] index ;
@@ -184,6 +185,7 @@ assign {tlbwi_index, tlbwi_vpn2, tlbwi_asid, tlbwi_g, tlbwi_pfn0, tlbwi_c0, tlbw
     index, vpn2, asid, g, pfn0, c0, d0, v0, pfn1, c1, d1, v1
 };
 assign tlbr_index = ws_inst_tlbr ? cp0_rdata[3:0] : 4'b0;
+
 // CP0
 CP0 CP0(
     .clk        (clk          ),
