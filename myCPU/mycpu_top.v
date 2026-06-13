@@ -130,6 +130,7 @@ cache i_cache(
     .ret_last    (i_rd_ret_last),
     .ret_data    (i_rd_data),
     .r_handshake (r_handshake),
+    .rready      (rready),
     // write
     .wr_req   (i_wr_req  ),
     .wr_type  (i_wr_type ),

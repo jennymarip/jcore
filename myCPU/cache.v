@@ -28,6 +28,7 @@ module cache(
     input           ret_last,       //返回数据是一次读请求对应的最后一个返回数据
     input  [31:0]   ret_data,       //读返回数据
     input           r_handshake,
+    input           rready,
 
     //part2 --> write
     output          wr_req,         //写请求有效信号
@@ -138,7 +139,7 @@ always @(*)
                 end
             REFILL:
                 begin
-                    if(ret_valid && ret_last)
+                    if(ret_valid && ret_last && rready)
                          next_state <= IDLE;
                     // if(ret_valid && ~ret_last)
                     //     //并未发来最后一个32位数据
@@ -223,8 +224,8 @@ assign cache_hit = way0_hit || way1_hit;
 assign tagv_we[0] = (curr_state == REFILL) && (buff_way == 0);
 assign tagv_we[1] = (curr_state == REFILL) && (buff_way == 1);
 
-assign tagv_addr[0] = index;
-assign tagv_addr[1] = index;
+assign tagv_addr[0] = (curr_state == REFILL)?buff_index:index;
+assign tagv_addr[1] = (curr_state == REFILL)?buff_index:index; // tagv地址不能简单选取index，写回时的index是下一个请求地址的index
 
 assign tagv_wdata[0] = {1'b1, reg_tag};
 assign tagv_wdata[1] = {1'b1, reg_tag};
@@ -416,8 +417,20 @@ assign addr_ok = (next_state == LOOKUP);
 2：在LOOKUP状态下是读操作且命中cache
 3：在REFILL状态下的最后一拍，即读出AXI发来的最后一个32位数据时
 */
+// 如果需要的是缓存行最高一段数据，则需要等一拍（等数据写入cache）,这是第三个条件
 assign data_ok = ((curr_state == LOOKUP) && (op == 1 || cache_hit)) || 
-                 (curr_state == REFILL && op == 0 && ret_valid && ret_last);
+                 ((curr_state == REFILL && op == 0 && ret_valid && ret_last) && buff_offset[3:2]!=2'b11) ||
+                 ((curr_state == REFILL && op == 0 && ret_valid && ret_last) && buff_offset[3:2]==2'b11 && last_inst_wr_done);
+reg last_inst_wr_done;
+always@(posedge clk)begin
+    if(~resetn)begin
+        last_inst_wr_done <= 1'b0;
+    end else if(curr_state == REFILL && op == 0 && ret_valid && ret_last) begin
+        last_inst_wr_done <= 1'b1;
+    end else if(last_inst_wr_done)begin
+        last_inst_wr_done <= 1'b0;
+    end
+end
 
 //在REPLACE状态下发出读请求
 assign rd_req  = curr_state == REPLACE;
