@@ -53,6 +53,8 @@ module mycpu_top(
 wire        inst_sram_req         ;
 wire [ 1:0] inst_sram_size        ;
 wire [31:0] inst_sram_addr        ;
+wire        inst_sram_addr_ok_i   ;
+wire        inst_sram_addr_ok     ;
 wire [31:0] inst_sram_addr_ok_addr;
 wire [31:0] inst_sram_rdata       ;
 wire [ 1:0] data_sram_size        ;
@@ -60,6 +62,7 @@ wire [ 3:0] data_sram_wstrb       ;
 wire [31:0] data_sram_addr        ;
 wire [31:0] data_sram_wdata       ;
 wire [31:0] data_sram_rdata       ;
+assign inst_sram_addr_ok = inst_sram_addr_ok_i && aresetn;
 mycpu_sram cpu_core(
     .clk    (aclk   ),
     .resetn (aresetn),
@@ -90,21 +93,64 @@ mycpu_sram cpu_core(
     .debug_wb_rf_wnum  (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata (debug_wb_rf_wdata)
 );
+wire         i_wr_req;
+wire [  2:0] i_wr_type;
+wire [ 31:0] i_wr_addr;
+wire [  3:0] i_wr_wstrb;
+wire [127:0] i_wr_data;
+wire        i_rd_req;
+wire [ 2:0] i_rd_type;
+wire [31:0] i_rd_addr;
+wire        i_rd_rdy;
+wire        i_rd_ret_vld;
+wire        i_rd_ret_last;
+wire [31:0] i_rd_data;
+cache i_cache(
+    .clk    (aclk   ),
+    .resetn (aresetn),
+    // cache <-> cpu
+    .valid        (inst_sram_req        ),
+    .op           (inst_sram_wr         ),
+    .index        (inst_sram_addr[11:4] ),
+    .tag          (inst_sram_addr[31:12]),
+    .offset       (inst_sram_addr[3:0]  ),
+    .wstrb        (inst_sram_wstrb      ),
+    .wdata        (inst_sram_wdata      ),
+    .addr_ok      (inst_sram_addr_ok_i  ),
+    .addr_ok_addr (inst_sram_addr_ok_addr),
+    .data_ok      (inst_sram_data_ok    ),
+    .rdata        (inst_sram_rdata      ),
+    // cache <-> AXI
+    // read
+    .rd_req      (i_rd_req),
+    .rd_type     (i_rd_type),
+    .rd_addr     (i_rd_addr),
+    .rd_rdy      (i_rd_rdy),
+    .ret_valid   (i_rd_ret_vld),
+    .ret_last    (i_rd_ret_last),
+    .ret_data    (i_rd_data),
+    .r_handshake (r_handshake),
+    // write
+    .wr_req   (i_wr_req  ),
+    .wr_type  (i_wr_type ),
+    .wr_addr  (i_wr_addr ),
+    .wr_wstrb (i_wr_wstrb),
+    .wr_data  (i_wr_data ),
+    .wr_rdy   (1'b1      )
+);
 // 转接桥
 sram2axi_bridge bridge(
     .clk    (aclk   ),
     .resetn (aresetn),
     // inst sram interface
-    .inst_sram_req          (inst_sram_req         ),
-    .inst_sram_wr           (inst_sram_wr          ),
-    .inst_sram_size         (inst_sram_size        ),
-    .inst_sram_wstrb        (inst_sram_wstrb       ),
-    .inst_sram_addr         (inst_sram_addr        ),
-    .inst_sram_wdata        (inst_sram_wdata       ),
-    .inst_sram_addr_ok_addr (inst_sram_addr_ok_addr),
-    .inst_sram_addr_ok      (inst_sram_addr_ok     ),
-    .inst_sram_data_ok      (inst_sram_data_ok     ),
-    .inst_sram_rdata        (inst_sram_rdata       ),
+    .icache_rd_req          (i_rd_req         ),
+    .icache_rd_type         (i_rd_type        ),
+    .icache_rd_addr         (i_rd_addr        ),
+    .icache_rd_rdy          (i_rd_rdy         ),
+    .icache_rd_ret_vld      (i_rd_ret_vld     ),
+    .icache_rd_ret_last     (i_rd_ret_last    ),
+    .icache_rd_rdata        (i_rd_data        ),
+    .r_handshake            (r_handshake      ),
     // data sram interface
     .data_sram_req     (data_sram_req    ),
     .data_sram_wr      (data_sram_wr     ),

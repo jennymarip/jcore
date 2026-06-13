@@ -212,7 +212,7 @@ wire   pre_fs_ready_go     ;
 reg    pre_fs_ready_go_reg ;
 wire   pre_fs_ready_go_flag;
 assign pre_fs_ready_go_flag = pre_fs_ready_go || pre_fs_ready_go_reg;
-assign to_fs_valid  = ~reset && pre_fs_ready_go_flag;
+assign to_fs_valid  = pre_fs_ready_go_flag;
 assign seq_pc       = fs_pc + 3'h4                  ;
 assign nextpc       = (WS_EX || WS_EX_reg) && ~(tlb_inv || tlb_inv_reg) ? ((refill || refill_reg) ? 32'hbfc00200 : 32'hbfc00380 ) : 
                       tlb_inv || tlb_inv_reg ? ((tlb_pc != 32'b0) ? tlb_pc : tlb_pc_reg)                                 :

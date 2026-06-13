@@ -28,8 +28,10 @@ module mycpu_sram(
     output [ 4:0] debug_wb_rf_wnum ,
     output [31:0] debug_wb_rf_wdata
 );
-reg         reset;
-always @(posedge clk) reset <= ~resetn;
+// reg         reset;
+// always @(posedge clk) reset <= ~resetn;
+wire reset;
+assign reset = ~resetn;
 
 wire [ 4:0]  EXE_dest  ;
 wire [ 4:0]  MEM_dest  ;
