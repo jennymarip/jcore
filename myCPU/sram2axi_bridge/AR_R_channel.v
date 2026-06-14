@@ -109,17 +109,28 @@ always @(posedge clk) begin
     end
 end
 // icache rsp
-assign icache_rd_rdy = ~icache_rd_axi_pending;
+assign icache_rd_rdy = ~(icache_rd_axi_pending || data_rd_axi_pending || read_data);
 reg icache_rd_axi_pending; // 一个icache引起的猝发读正在进行没有结束
 always @(posedge clk)begin
     if(reset)begin
         icache_rd_axi_pending <= 1'b0;
-    end else if(read_tran && ~read_data)begin
+    end else if(read_tran && ~read_data && ~data_rd_axi_pending)begin
         icache_rd_axi_pending <= 1'b1;
     end else if(rlast && rvalid && rready)begin
         icache_rd_axi_pending <= 1'b0;
     end
 end
+reg data_rd_axi_pending; // 一个data读请求引起的axi事务没有结束
+always@(posedge clk)begin
+    if(reset)begin
+        data_rd_axi_pending <= 1'b0;
+    end else if(read_data)begin
+        data_rd_axi_pending <= 1'b1;
+    end else if(data_rd_axi_pending && rlast && rvalid && rready)begin
+        data_rd_axi_pending <= 1'b0;
+    end
+end
+
 assign icache_rd_ret_vld = ~rid && rvalid;
 assign icache_rd_ret_last = ~rid && rlast;
 assign icache_rd_rdata = rdata;
