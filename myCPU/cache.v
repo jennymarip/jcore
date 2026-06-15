@@ -330,6 +330,10 @@ wire [3:0]  data_bank_we   [1:0][3:0];         //开启了字节写使能之后w
 wire [7:0]  data_bank_addr [1:0][3:0];         //depth = 256 = 2 ^ 8
 wire [31:0] data_bank_wdata[1:0][3:0];
 wire [31:0] data_bank_rdata[1:0][3:0];
+wire [7:0] data_bank_index;
+// wire [3:0] data_bank_offset;
+assign data_bank_index = (curr_state == IDLE)?index:buff_index;
+// assign data_bank_offset = (curr_state == IDLE)?offset:buff_offset;
 
 //最终读出的数据
 wire [127:0] cache_rdata;
@@ -350,14 +354,14 @@ assign data_bank_we[1][1] = ({4{if_write && buff_way  && buff_offset[3:2] == 1}}
 assign data_bank_we[1][2] = ({4{if_write && buff_way  && buff_offset[3:2] == 2}} & buff_wstrb) | {4{ret_valid & buff_way  & ret_cnt == 2'b10}};
 assign data_bank_we[1][3] = ({4{if_write && buff_way  && buff_offset[3:2] == 3}} & buff_wstrb) | {4{ret_valid & buff_way  & ret_cnt == 2'b11}};
 
-assign data_bank_addr[0][0] = buff_index;
-assign data_bank_addr[0][1] = buff_index;
-assign data_bank_addr[0][2] = buff_index;
-assign data_bank_addr[0][3] = buff_index;
-assign data_bank_addr[1][0] = buff_index;
-assign data_bank_addr[1][1] = buff_index;
-assign data_bank_addr[1][2] = buff_index;
-assign data_bank_addr[1][3] = buff_index;
+assign data_bank_addr[0][0] = data_bank_index;
+assign data_bank_addr[0][1] = data_bank_index;
+assign data_bank_addr[0][2] = data_bank_index;
+assign data_bank_addr[0][3] = data_bank_index;
+assign data_bank_addr[1][0] = data_bank_index;
+assign data_bank_addr[1][1] = data_bank_index;
+assign data_bank_addr[1][2] = data_bank_index;
+assign data_bank_addr[1][3] = data_bank_index;
 
 assign data_bank_wdata[0][0] = (ret_valid)? ret_data : buff_wdata;
 assign data_bank_wdata[0][1] = (ret_valid)? ret_data : buff_wdata;
@@ -418,7 +422,7 @@ assign addr_ok = (next_state == LOOKUP);
 3：在REFILL状态下的最后一拍，即读出AXI发来的最后一个32位数据时
 */
 // 如果需要的是缓存行最高一段数据，则需要等一拍（等数据写入cache）,这是第三个条件
-assign data_ok = ((curr_state == LOOKUP) && (op == 1 || cache_hit)) || 
+assign data_ok = ((curr_state == LOOKUP) && (op == 1 || cache_hit)) ||
                  ((curr_state == REFILL && op == 0 && ret_valid && ret_last) && buff_offset[3:2]!=2'b11) ||
                  ((curr_state == REFILL && op == 0 && ret_valid && ret_last) && buff_offset[3:2]==2'b11 && last_inst_wr_done);
 reg last_inst_wr_done;
