@@ -128,6 +128,7 @@ reg         tlb_inv_reg;
 reg  [31:0] tlb_pc_reg ;
 reg         refill_reg ;
 wire [31:0] fs_inst    ;
+wire [31:0] inst_to_ds ;
 reg  [31:0] fs_pc      ;
 wire [ 4:0] ex_code    ;
 wire [31:0] BadVAddr   ;
@@ -167,6 +168,17 @@ assign fs_inst      = inst_sram_rdata                                          ;
 assign ex_code      = (fs_ex_code != `NO_EX)                    ? fs_ex_code :
                       (ex_word == 4'b0) && (fs_pc[1:0] != 2'b0) ? `ADEL      :
                                                                   `NO_EX;
+reg[31:0] buff_fs_inst;
+always @(posedge clk) begin
+    if (reset) begin
+        buff_fs_inst <= 32'b0;
+    end else if (inst_sram_data_ok) begin
+        buff_fs_inst <= fs_inst;
+    end else if (fs_to_ds_valid && ds_allowin) begin
+        buff_fs_inst <= 32'b0;
+    end
+end
+assign inst_to_ds = inst_sram_data_ok?fs_inst:buff_fs_inst;
 assign BadVAddr     = (ex_code == `ADEL) ? fs_pc : 32'b0;
 assign pc_error     = (ex_code == `ADEL)                ;
 assign fs_to_ds_bus = {fs_refill_reg,
@@ -174,7 +186,7 @@ assign fs_to_ds_bus = {fs_refill_reg,
                        pc_error   ,
                        BadVAddr   ,
                        ex_code    ,
-                       fs_inst    ,
+                       inst_to_ds ,
                        fs_pc   };
 always @ (posedge clk) begin
     if (reset) begin
