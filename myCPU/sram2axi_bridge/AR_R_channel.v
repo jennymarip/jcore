@@ -10,7 +10,7 @@ module AR_R_channel(
     output        icache_rd_ret_vld ,
     output        icache_rd_ret_last,
     output [31:0] icache_rd_rdata   ,
-    output        r_handshake       ,
+    output        icache_r_handshake,
     // data sram interface
     input         data_sram_req    ,
     input         data_sram_wr     ,
@@ -57,7 +57,7 @@ always @(posedge clk) begin
 end
 /* r controll */
 assign r_handshake = rvalid && rready; 
-
+assign icache_r_handshake = r_handshake && (rid == 4'b0);
 // AR
 assign arid    = arid_reg   ;
 assign araddr  = araddr_reg ;
@@ -131,8 +131,8 @@ always@(posedge clk)begin
     end
 end
 
-assign icache_rd_ret_vld = ~rid && rvalid;
-assign icache_rd_ret_last = ~rid && rlast;
+assign icache_rd_ret_vld = ~rid[0] && rvalid;
+assign icache_rd_ret_last = ~rid[0] && rlast;
 assign icache_rd_rdata = rdata;
 
 // sram(data) interface
@@ -168,8 +168,8 @@ always @(posedge clk) begin
         inst_sram_rdata_reg   <= 32'b0;
         data_sram_rdata_reg   <= 32'b0;
     end else if (rvalid) begin
-        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= rid ? {           1'b0,  1'b1} : { 1'b1,            1'b0}; 
-        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= rid ? {icache_rd_rdata, rdata} : {rdata, data_sram_rdata};
+        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (rid == 4'b1) ? {           1'b0,  1'b1} : { 1'b1,            1'b0}; 
+        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (rid == 4'b1) ? {icache_rd_rdata, rdata} : {rdata, data_sram_rdata};
     end
     if (inst_sram_data_ok) begin // data ok 信号只维持一拍
         inst_sram_data_ok_reg <= 1'b0;

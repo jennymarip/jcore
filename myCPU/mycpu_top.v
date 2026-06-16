@@ -129,7 +129,7 @@ cache i_cache(
     .ret_valid   (i_rd_ret_vld),
     .ret_last    (i_rd_ret_last),
     .ret_data    (i_rd_data),
-    .r_handshake (r_handshake),
+    .r_handshake (icache_r_handshake),
     .rready      (rready),
     // write
     .wr_req   (i_wr_req  ),
@@ -151,7 +151,7 @@ sram2axi_bridge bridge(
     .icache_rd_ret_vld      (i_rd_ret_vld     ),
     .icache_rd_ret_last     (i_rd_ret_last    ),
     .icache_rd_rdata        (i_rd_data        ),
-    .r_handshake            (r_handshake      ),
+    .icache_r_handshake     (icache_r_handshake),
     // data sram interface
     .data_sram_req     (data_sram_req    ),
     .data_sram_wr      (data_sram_wr     ),

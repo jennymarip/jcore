@@ -9,7 +9,7 @@ module sram2axi_bridge(
     output        icache_rd_ret_vld     ,
     output        icache_rd_ret_last    ,
     output [31:0] icache_rd_rdata       ,
-    output        r_handshake           ,
+    output        icache_r_handshake    ,
     // data sram interface
     input         data_sram_req    ,
     input         data_sram_wr     ,
@@ -83,7 +83,7 @@ AR_R_channel ar_r_channel(
     .icache_rd_ret_vld      (icache_rd_ret_vld     ),
     .icache_rd_ret_last     (icache_rd_ret_last    ),
     .icache_rd_rdata        (icache_rd_rdata       ),
-    .r_handshake            (r_handshake           ),
+    .icache_r_handshake     (icache_r_handshake    ),
     // data sram interface
     .data_sram_req     (data_sram_req      ),
     .data_sram_wr      (data_sram_wr       ),
