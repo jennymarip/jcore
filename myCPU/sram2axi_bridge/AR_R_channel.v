@@ -85,11 +85,17 @@ always @(posedge clk) begin
         arlen_reg   <=  8'b0;
         arsize_reg  <=  3'b0;
         arvalid_reg <=  1'b0;
-    end else if (read_tran && ~arvalid) begin // 两种情况，读数据，读指令
-        arid_reg    <= read_data ? 4'b1 : 4'b0;
-        araddr_reg  <= read_data ? data_sram_addr : icache_rd_addr;
-        arlen_reg   <= read_data ? 8'b0 : 8'b11;
-        arsize_reg  <= read_data ? {1'b0, data_sram_size} : 3'b010;
+    end else if (read_tran && ~read_data && ~arvalid) begin //inst
+        arid_reg    <= 4'b0;
+        araddr_reg  <= icache_rd_addr;
+        arlen_reg   <= 8'b11;
+        arsize_reg  <= 3'b010;
+        arvalid_reg <= 1'b1;
+    end else if(read_data && ~arvalid && ~data_rd_req_send)begin //data
+        arid_reg    <= 4'b1;
+        araddr_reg  <= data_sram_addr;
+        arlen_reg   <= 8'b0;
+        arsize_reg  <= {1'b0, data_sram_size};
         arvalid_reg <= 1'b1;
     end
 end
@@ -120,7 +126,9 @@ always @(posedge clk)begin
         icache_rd_axi_pending <= 1'b0;
     end
 end
+// 状态信号
 reg data_rd_axi_pending; // 一个data读请求引起的axi事务没有结束
+reg data_rd_req_send; // 数据请求已经发出
 always@(posedge clk)begin
     if(reset)begin
         data_rd_axi_pending <= 1'b0;
@@ -128,6 +136,15 @@ always@(posedge clk)begin
         data_rd_axi_pending <= 1'b1;
     end else if(data_rd_axi_pending && rlast && rvalid && rready)begin
         data_rd_axi_pending <= 1'b0;
+    end
+end
+always @(posedge clk) begin
+    if(reset)begin
+        data_rd_req_send <= 1'b0;
+    end else if(ar_handshake && arid == 4'b1)begin
+        data_rd_req_send <= 1'b1;
+    end else if(data_rd_req_send && data_rd_axi_pending && rlast && rvalid && rready)begin
+        data_rd_req_send <= 1'b0;
     end
 end
 
