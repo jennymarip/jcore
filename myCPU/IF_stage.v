@@ -290,7 +290,7 @@ assign vaddr = nextpc;
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 // 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
 wire   inst_sram_req;
-assign inst_sram_req = ((branch_in_fs? 1'b1 :
+assign inst_sram_req = ((branch_in_fs? ds_allowin :
                                      fs_allowin && ~br_stall) || (WS_EX || WS_EX_reg)) && (pre_fs_excode == `NO_EX);
 
 // inst_ready_reg 寄存器和 inst_sram_data_ok 信号共同决定取值阶段指令是否就绪（二者至少一方有效则指令就绪）
