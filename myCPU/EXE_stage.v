@@ -401,7 +401,7 @@ always @(posedge clk) begin
     else begin
         multu_exe <= is_multu;
     end
-    if(multu_exe & (ex_code == `NO_EX) & ~MS_EX) begin
+    if(es_valid & multu_exe & (ex_code == `NO_EX) & ~MS_EX) begin
         HI <= multu_res[63:32];
         LO <= multu_res[31: 0];
     end

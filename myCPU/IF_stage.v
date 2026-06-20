@@ -289,6 +289,7 @@ assign vaddr = nextpc;
 // inst sram interface
 // 注意，这里确保 fs_allowin 为 1 才可以发地址请求，虽然降低效率但是可以隐藏一些指令请求的问题
 // 同时，在必要时将请求信号拉低，保证在一个事务结束之前，不发起另一个请求，简化设计难度，降低性能
+// 同时，当fs为跳转指令，只有当ds_allowin，也就是fs不阻塞时，预取指阶段才会发出请求（隐藏潜在的问题，多个data_ok返回到fs）
 wire   inst_sram_req;
 assign inst_sram_req = ((branch_in_fs? ds_allowin :
                                      fs_allowin && ~br_stall) || (WS_EX || WS_EX_reg)) && (pre_fs_excode == `NO_EX);
