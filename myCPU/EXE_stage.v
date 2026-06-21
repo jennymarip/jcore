@@ -445,7 +445,7 @@ always @(posedge clk) begin
     // set data_sram_en_reg
     if (reset) begin
         data_sram_en_reg    <= 1'b0;
-    end else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok) begin
+    end else if (data_sram_req && ~data_sram_en && ~data_sram_en_and_ok && ~(WS_EX || MS_EX)) begin
         data_sram_en_reg    <= data_sram_req;
     end else if (data_sram_addr_ok && data_sram_en) begin
         data_sram_en_reg    <= 1'b0;
