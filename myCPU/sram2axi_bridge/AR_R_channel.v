@@ -11,16 +11,15 @@ module AR_R_channel(
     output        icache_rd_ret_last,
     output [31:0] icache_rd_rdata   ,
     output        icache_r_handshake,
-    // data sram interface
-    input         data_sram_req    ,
-    input         data_sram_wr     ,
-    input [ 1:0]  data_sram_size   ,
-    input [ 3:0]  data_sram_wstrb  ,
-    input [31:0]  data_sram_addr   ,
-    input [31:0]  data_sram_wdata  ,
-    output        data_sram_addr_ok,
-    output        data_sram_data_ok,
-    output [31:0] data_sram_rdata  ,
+    // dcache interface
+    input         dcache_rd_req     ,
+    input [ 2:0]  dcache_rd_type    ,
+    input [31:0]  dcache_rd_addr    ,
+    output        dcache_rd_rdy     ,
+    output        dcache_rd_ret_vld ,
+    output        dcache_rd_ret_last,
+    output [31:0] dcache_rd_rdata   ,
+    output        dcache_r_handshake,
     // AR
     output [ 3:0] arid   ,
     output [31:0] araddr ,
@@ -40,9 +39,6 @@ module AR_R_channel(
     input        rvalid,
     output       rready
 );
-// controll
-wire   read_tran;
-assign read_tran = icache_rd_req || data_sram_req && ~data_sram_wr;
 /* ar controll */
 wire   ar_handshake, ar_handshake_flag; // flag 表明存在读请求数据未返回
 reg    ar_handshake_reg;
@@ -58,6 +54,7 @@ end
 /* r controll */
 assign r_handshake = rvalid && rready; 
 assign icache_r_handshake = r_handshake && (rid == 4'b0);
+assign dcache_r_handshake = r_handshake && (rid == 4'b1);
 // AR
 assign arid    = arid_reg   ;
 assign araddr  = araddr_reg ;
@@ -68,10 +65,6 @@ assign arlock  = 2'b0       ;
 assign arcache = 4'b0       ;
 assign arprot  = 3'b0       ;
 assign arvalid = arvalid_reg;
-
-/* read_data信号区分当 data_sram_req 有效时，是读数据还是写数据 */
-wire   read_data;
-assign read_data = data_sram_req && ~data_sram_wr;
 
 reg [ 3:0] arid_reg   ;
 reg [31:0] araddr_reg ;
@@ -85,17 +78,17 @@ always @(posedge clk) begin
         arlen_reg   <=  8'b0;
         arsize_reg  <=  3'b0;
         arvalid_reg <=  1'b0;
-    end else if (read_tran && ~read_data && ~arvalid) begin //inst
+    end else if (icache_rd_req && ~arvalid) begin //inst
         arid_reg    <= 4'b0;
         araddr_reg  <= icache_rd_addr;
         arlen_reg   <= 8'b11;
         arsize_reg  <= 3'b010;
         arvalid_reg <= 1'b1;
-    end else if(read_data && ~arvalid && ~data_rd_req_send)begin //data
+    end else if(dcache_rd_req && ~arvalid && ~dcache_rd_req_send)begin //data
         arid_reg    <= 4'b1;
-        araddr_reg  <= data_sram_addr;
-        arlen_reg   <= 8'b0;
-        arsize_reg  <= {1'b0, data_sram_size};
+        araddr_reg  <= dcache_rd_addr;
+        arlen_reg   <= 8'b11;
+        arsize_reg  <= 3'b010;
         arvalid_reg <= 1'b1;
     end
 end
@@ -114,85 +107,48 @@ always @(posedge clk) begin
         rready_reg <= 1'b0;
     end
 end
-// icache rsp
-assign icache_rd_rdy = ~(icache_rd_axi_pending || data_rd_axi_pending || read_data);
+
+
+// cache rsp
+assign icache_rd_rdy = ~(icache_rd_axi_pending || dcache_rd_axi_pending || dcache_rd_req);
+assign dcache_rd_rdy = ~(icache_rd_axi_pending || dcache_rd_axi_pending || icache_rd_req);
 reg icache_rd_axi_pending; // 一个icache引起的猝发读正在进行没有结束
 always @(posedge clk)begin
     if(reset)begin
         icache_rd_axi_pending <= 1'b0;
-    end else if(read_tran && ~read_data && ~data_rd_axi_pending)begin
+    end else if(icache_rd_req && ~dcache_rd_axi_pending)begin
         icache_rd_axi_pending <= 1'b1;
     end else if(rlast && rvalid && rready)begin
         icache_rd_axi_pending <= 1'b0;
     end
 end
 // 状态信号
-reg data_rd_axi_pending; // 一个data读请求引起的axi事务没有结束
-reg data_rd_req_send; // 数据请求已经发出
+reg dcache_rd_axi_pending; // 一个data读请求引起的axi事务没有结束
+reg dcache_rd_req_send; // 数据请求已经发出
 always@(posedge clk)begin
     if(reset)begin
-        data_rd_axi_pending <= 1'b0;
-    end else if(read_data)begin
-        data_rd_axi_pending <= 1'b1;
-    end else if(data_rd_axi_pending && rlast && rvalid && rready)begin
-        data_rd_axi_pending <= 1'b0;
+        dcache_rd_axi_pending <= 1'b0;
+    end else if(dcache_rd_req)begin
+        dcache_rd_axi_pending <= 1'b1;
+    end else if(dcache_rd_axi_pending && rlast && rvalid && rready)begin
+        dcache_rd_axi_pending <= 1'b0;
     end
 end
 always @(posedge clk) begin
     if(reset)begin
-        data_rd_req_send <= 1'b0;
+        dcache_rd_req_send <= 1'b0;
     end else if(ar_handshake && arid == 4'b1)begin
-        data_rd_req_send <= 1'b1;
-    end else if(data_rd_req_send && data_rd_axi_pending && rlast && rvalid && rready)begin
-        data_rd_req_send <= 1'b0;
+        dcache_rd_req_send <= 1'b1;
+    end else if(dcache_rd_req_send && dcache_rd_axi_pending && rlast && rvalid && rready)begin
+        dcache_rd_req_send <= 1'b0;
     end
 end
 
 assign icache_rd_ret_vld = ~rid[0] && rvalid;
 assign icache_rd_ret_last = ~rid[0] && rlast;
 assign icache_rd_rdata = rdata;
+assign dcache_rd_ret_vld = rid[0] && rvalid;
+assign dcache_rd_ret_last = rid[0] && rlast;
+assign dcache_rd_rdata = rdata;
 
-// sram(data) interface
-wire inst_sram_data_ok;
-assign data_sram_addr_ok      = data_sram_addr_ok_reg;
-assign inst_sram_data_ok      = inst_sram_data_ok_reg;
-assign data_sram_data_ok      = data_sram_data_ok_reg;
-assign data_sram_rdata        = data_sram_rdata_reg  ;
-reg        inst_sram_addr_ok_reg;
-reg        data_sram_addr_ok_reg;
-reg        inst_sram_data_ok_reg;
-reg        data_sram_data_ok_reg;
-reg [31:0] inst_sram_rdata_reg  ;
-reg [31:0] data_sram_rdata_reg  ;
-always @(posedge clk) begin
-    // addr_ok
-    if (reset) begin
-        inst_sram_addr_ok_reg      <=  1'b0;
-        data_sram_addr_ok_reg      <=  1'b0;
-    end else if (ar_handshake) begin
-        inst_sram_addr_ok_reg      <= arid ?  1'b0 :   1'b1;
-        data_sram_addr_ok_reg      <= arid ?  1'b1 :   1'b0;
-    end else if (data_sram_req && data_sram_addr_ok_reg || icache_rd_req && inst_sram_addr_ok_reg) begin
-        inst_sram_addr_ok_reg      <=  1'b0;
-        data_sram_addr_ok_reg      <=  1'b0;
-    end
-end
-always @(posedge clk) begin
-    // data_ok & data
-    if (reset) begin
-        inst_sram_data_ok_reg <=  1'b0;
-        data_sram_data_ok_reg <=  1'b0;
-        inst_sram_rdata_reg   <= 32'b0;
-        data_sram_rdata_reg   <= 32'b0;
-    end else if (rvalid) begin
-        {inst_sram_data_ok_reg, data_sram_data_ok_reg} <= (rid == 4'b1) ? {           1'b0,  1'b1} : { 1'b1,            1'b0}; 
-        {inst_sram_rdata_reg  , data_sram_rdata_reg  } <= (rid == 4'b1) ? {icache_rd_rdata, rdata} : {rdata, data_sram_rdata};
-    end
-    if (inst_sram_data_ok) begin // data ok 信号只维持一拍
-        inst_sram_data_ok_reg <= 1'b0;
-    end
-    if (data_sram_data_ok) begin
-        data_sram_data_ok_reg <= 1'b0;
-    end
-end
 endmodule

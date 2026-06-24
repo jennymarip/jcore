@@ -2,15 +2,13 @@
 module AW_W_B_channel(
     input clk  ,
     input reset,
-    // data sram interface
-    input         data_sram_req    ,
-    input         data_sram_wr     ,
-    input [ 1:0]  data_sram_size   ,
-    input [ 3:0]  data_sram_wstrb  ,
-    input [31:0]  data_sram_addr   ,
-    input [31:0]  data_sram_wdata  ,
-    output        data_sram_addr_ok,
-    output        data_sram_data_ok,
+    // dcache interface
+    input         dcache_wr_req  ,
+    input [  2:0] dcache_wr_type ,
+    input [ 31:0] dcache_wr_addr ,
+    input [  3:0] dcache_wr_wstrb,
+    input [127:0] dcache_wr_data ,
+    output        dcache_wr_ready,
     // AW
     output [ 3:0] awid   ,
     output [31:0] awaddr ,
@@ -35,9 +33,6 @@ module AW_W_B_channel(
     input        bvalid,
     output       bready
 );
-// controll
-wire   write_tran;
-assign write_tran = data_sram_req && data_sram_wr;
 /* aw controll */
 wire   aw_handshake, aw_handshake_flag;
 reg    aw_handshake_reg;
@@ -98,10 +93,10 @@ always @(posedge clk) begin
         awaddr_reg  <= 32'b0;
         awsize_reg  <=  3'b0;
         awvalid_reg <=  1'b0;
-    end else if (write_tran) begin
+    end else if (dcache_wr_req) begin
         awid_reg    <= 1'b1;
-        awaddr_reg  <= data_sram_addr;
-        awsize_reg  <= {1'b0, data_sram_size};
+        awaddr_reg  <= dcache_wr_addr;
+        awsize_reg  <= 3'b010
         awvalid_reg <= 1'b1;
     end
 end
@@ -112,10 +107,10 @@ always @(posedge clk) begin
         wdata_reg   <= 32'b0;
         wstrb_reg   <=  4'b0;
         wvalid_reg  <=  1'b0;
-    end else if (write_tran) begin
+    end else if (dcache_wr_req) begin
         wid_reg     <= 1'b1;
         wdata_reg   <= data_sram_wdata;
-        wstrb_reg   <= data_sram_wstrb;
+        wstrb_reg   <= dcache_wr_wstrb;
         wvalid_reg  <= 1'b1;
     end
 end
@@ -129,33 +124,6 @@ always @(posedge clk) begin
         bready_reg <= 1'b1;
     end else if (b_handshake) begin
         bready_reg <= 1'b0;
-    end
-end
-
-// data sram interface
-assign data_sram_addr_ok = data_sram_addr_ok_reg;
-assign data_sram_data_ok = data_sram_data_ok_reg;
-
-reg        data_sram_addr_ok_reg;
-reg        data_sram_data_ok_reg;
-always @(posedge clk) begin
-    // addr_ok
-    if (reset) begin
-        data_sram_addr_ok_reg <= 1'b0;
-    end else if (aw_handshake && w_handshake_flag || aw_handshake_flag && w_handshake) begin
-        data_sram_addr_ok_reg <= 1'b1;
-    end else begin
-        data_sram_addr_ok_reg <= 1'b0;
-    end
-end
-always @(posedge clk) begin
-    // data_ok
-    if (reset || data_sram_data_ok) begin
-        data_sram_data_ok_reg <= 1'b0;
-    end else if (bvalid) begin
-        data_sram_data_ok_reg <= 1'b1;
-    end else begin
-        data_sram_data_ok_reg <= 1'b0;
     end
 end
 endmodule

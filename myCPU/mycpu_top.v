@@ -139,29 +139,83 @@ cache i_cache(
     .wr_data  (i_wr_data ),
     .wr_rdy   (1'b1      )
 );
+wire         d_wr_req;
+wire [  2:0] d_wr_type;
+wire [ 31:0] d_wr_addr;
+wire [  3:0] d_wr_wstrb;
+wire [127:0] d_wr_data;
+wire         d_wr_ready;
+wire        d_rd_req;
+wire [ 2:0] d_rd_type;
+wire [31:0] d_rd_addr;
+wire        d_rd_rdy;
+wire        d_rd_ret_vld;
+wire        d_rd_ret_last;
+wire [31:0] d_rd_data;
+cache d_cache(
+    .clk    (aclk   ),
+    .resetn (aresetn),
+    // cache <-> cpu
+    .valid        (data_sram_req        ),
+    .op           (data_sram_wr         ),
+    .index        (data_sram_addr[11:4] ),
+    .tag          (data_sram_addr[31:12]),
+    .offset       (data_sram_addr[3:0]  ),
+    .wstrb        (data_sram_wstrb      ),
+    .wdata        (data_sram_wdata      ),
+    .addr_ok      (data_sram_addr_ok    ),
+    .addr_ok_addr (data_sram_addr_ok_addr),
+    .data_ok      (data_sram_data_ok    ),
+    .rdata        (data_sram_rdata      ),
+    // cache <-> AXI
+    // read
+    .rd_req      (d_rd_req),
+    .rd_type     (d_rd_type),
+    .rd_addr     (d_rd_addr),
+    .rd_rdy      (d_rd_rdy),
+    .ret_valid   (d_rd_ret_vld),
+    .ret_last    (d_rd_ret_last),
+    .ret_data    (d_rd_data),
+    .r_handshake (dcache_r_handshake),
+    .rready      (rready),
+    // write
+    .wr_req   (d_wr_req  ),
+    .wr_type  (d_wr_type ),
+    .wr_addr  (d_wr_addr ),
+    .wr_wstrb (d_wr_wstrb),
+    .wr_data  (d_wr_data ),
+    .wr_rdy   (d_wr_ready)
+);
 // 转接桥
 sram2axi_bridge bridge(
     .clk    (aclk   ),
     .resetn (aresetn),
-    // inst sram interface
-    .icache_rd_req          (i_rd_req         ),
-    .icache_rd_type         (i_rd_type        ),
-    .icache_rd_addr         (i_rd_addr        ),
-    .icache_rd_rdy          (i_rd_rdy         ),
-    .icache_rd_ret_vld      (i_rd_ret_vld     ),
-    .icache_rd_ret_last     (i_rd_ret_last    ),
-    .icache_rd_rdata        (i_rd_data        ),
+    // icache interface
+    .icache_rd_req          (i_rd_req          ),
+    .icache_rd_type         (i_rd_type         ),
+    .icache_rd_addr         (i_rd_addr         ),
+    .icache_rd_rdy          (i_rd_rdy          ),
+    .icache_rd_ret_vld      (i_rd_ret_vld      ),
+    .icache_rd_ret_last     (i_rd_ret_last     ),
+    .icache_rd_rdata        (i_rd_data         ),
     .icache_r_handshake     (icache_r_handshake),
-    // data sram interface
-    .data_sram_req     (data_sram_req    ),
-    .data_sram_wr      (data_sram_wr     ),
-    .data_sram_size    (data_sram_size   ),
-    .data_sram_wstrb   (data_sram_wstrb  ),
-    .data_sram_addr    (data_sram_addr   ),
-    .data_sram_wdata   (data_sram_wdata  ),
-    .data_sram_addr_ok (data_sram_addr_ok),
-    .data_sram_data_ok (data_sram_data_ok),
-    .data_sram_rdata   (data_sram_rdata  ),
+    // dcache interface
+    // rd
+    .dcache_rd_req      (d_rd_req          ),
+    .dcache_rd_type     (d_rd_type         ),
+    .dcahce_rd_addr     (d_rd_addr         ),
+    .dcache_rd_rdy      (d_rd_rdy          ),
+    .dcache_rd_ret_vld  (d_rd_ret_vld      ),
+    .dcache_rd_ret_last (d_rd_ret_last     ),
+    .dcache_rd_rdata    (d_rd_data         ),
+    .dcache_r_handshake (dcache_r_handshake),
+    // wr
+    .dcache_wr_req      (d_wr_req   ),
+    .dcache_wr_type     (d_wr_type  ),
+    .dcache_wr_addr     (d_wr_addr  ),
+    .dcache_wr_wstrb    (d_wr_wstrb ),
+    .dcache_wr_data     (d_wr_data  ),
+    .dcache_wr_ready    (d_wr_ready ),
     // axi interface
     // AR
     .arid    (arid   ),

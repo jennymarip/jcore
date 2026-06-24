@@ -1,7 +1,7 @@
 module sram2axi_bridge(
     input clk   ,
     input resetn,
-    // inst sram interface
+    // icache interface
     input         icache_rd_req         ,
     input [ 2:0]  icache_rd_type        , // 驱动arlen
     input [31:0]  icache_rd_addr        ,
@@ -10,16 +10,23 @@ module sram2axi_bridge(
     output        icache_rd_ret_last    ,
     output [31:0] icache_rd_rdata       ,
     output        icache_r_handshake    ,
-    // data sram interface
-    input         data_sram_req    ,
-    input         data_sram_wr     ,
-    input [ 1:0]  data_sram_size   ,
-    input [ 3:0]  data_sram_wstrb  ,
-    input [31:0]  data_sram_addr   ,
-    input [31:0]  data_sram_wdata  ,
-    output        data_sram_addr_ok,
-    output        data_sram_data_ok,
-    output [31:0] data_sram_rdata  ,
+    // dcache interface
+    // rd
+    input         dcache_rd_req         ,
+    input [ 2:0]  dcache_rd_type        , // 驱动arlen
+    input [31:0]  dcache_rd_addr        ,
+    output        dcache_rd_rdy         ,
+    output        dcache_rd_ret_vld     ,
+    output        dcache_rd_ret_last    ,
+    output [31:0] dcache_rd_rdata       ,
+    output        dcache_r_handshake    ,
+    // wr
+    input         dcache_wr_req  ,
+    input [ 2:0]  dcache_wr_type ,
+    input [31:0]  dcache_wr_addr ,
+    input [ 3:0]  dcache_wr_wstrb,
+    input [127:0] dcache_wr_data ,
+    output        dcache_wr_ready,
     // axi interface
     // AR
     output [ 3:0] arid   ,
@@ -65,17 +72,11 @@ module sram2axi_bridge(
 );
 reg reset;
 always @(posedge clk) reset <= ~resetn;
-wire data_sram_data_ok_r;
-wire data_sram_data_ok_w;
-wire data_sram_addr_ok_r;
-wire data_sram_addr_ok_w;
-assign data_sram_data_ok = data_sram_data_ok_r || data_sram_data_ok_w;
-assign data_sram_addr_ok = data_sram_addr_ok_r || data_sram_addr_ok_w;
 // AR & R
 AR_R_channel ar_r_channel(
     .clk   (clk  ),
     .reset (reset),
-    // inst sram interface
+    // inst interface
     .icache_rd_req          (icache_rd_req         ),
     .icache_rd_type         (icache_rd_type        ),
     .icache_rd_addr         (icache_rd_addr        ),
@@ -84,16 +85,15 @@ AR_R_channel ar_r_channel(
     .icache_rd_ret_last     (icache_rd_ret_last    ),
     .icache_rd_rdata        (icache_rd_rdata       ),
     .icache_r_handshake     (icache_r_handshake    ),
-    // data sram interface
-    .data_sram_req     (data_sram_req      ),
-    .data_sram_wr      (data_sram_wr       ),
-    .data_sram_size    (data_sram_size     ),
-    .data_sram_wstrb   (data_sram_wstrb    ),
-    .data_sram_addr    (data_sram_addr     ),
-    .data_sram_wdata   (data_sram_wdata    ),
-    .data_sram_addr_ok (data_sram_addr_ok_r),
-    .data_sram_data_ok (data_sram_data_ok_r),
-    .data_sram_rdata   (data_sram_rdata    ),
+    // data interface
+    .dcache_rd_req          (dcache_rd_req         ),
+    .dcache_rd_type         (dcache_rd_type        ),
+    .dcache_rd_addr         (dcache_rd_addr        ),
+    .dcache_rd_rdy          (dcache_rd_rdy         ),
+    .dcache_rd_ret_vld      (dcache_rd_ret_vld     ),
+    .dcache_rd_ret_last     (dcache_rd_ret_last    ),
+    .dcache_rd_rdata        (dcache_rd_rdata       ),
+    .dcache_r_handshake     (dcache_r_handshake    ),
     // AR
     .arid    (arid   ),
     .araddr  (araddr ),
@@ -117,15 +117,13 @@ AR_R_channel ar_r_channel(
 AW_W_B_channel aw_w_b_channel(
     .clk   (clk  ),
     .reset (reset),
-    // data sram interface
-    .data_sram_req     (data_sram_req      ),
-    .data_sram_wr      (data_sram_wr       ),
-    .data_sram_size    (data_sram_size     ),
-    .data_sram_wstrb   (data_sram_wstrb    ),
-    .data_sram_addr    (data_sram_addr     ),
-    .data_sram_wdata   (data_sram_wdata    ),
-    .data_sram_addr_ok (data_sram_addr_ok_w),
-    .data_sram_data_ok (data_sram_data_ok_w),
+    // dcache interface
+    .dcache_wr_req   (dcache_wr_req  ),
+    .dcache_wr_type  (dcache_wr_type ),
+    .dcache_wr_addr  (dcache_wr_addr ),
+    .dcache_wr_wstrb (dcache_wr_wstrb),
+    .dcache_wr_data  (dcache_wr_data ),
+    .dcache_wr_ready (dcache_wr_ready),
     // AW
     .awid    (awid   ),
     .awaddr  (awaddr ),
