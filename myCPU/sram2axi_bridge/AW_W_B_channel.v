@@ -91,7 +91,7 @@ reg [127:0] dcache_data_reg;
 always @(posedge clk) begin
     if(reset || b_handshake)begin
         dcache_data_reg <= 128'b0;
-    end else if(dcache_rd_req && ~axi_wr_pending)begin
+    end else if(dcache_wr_req && ~axi_wr_pending)begin
         dcache_data_reg <= dcache_wr_data;
     end else begin
         dcache_data_reg <= dcache_data_reg;
@@ -138,7 +138,7 @@ always @(posedge clk) begin
         awid_reg    <= 1'b1;
         awaddr_reg  <= dcache_wr_addr;
         awlen_reg   <= 8'b11;
-        awsize_reg  <= 3'b010
+        awsize_reg  <= 3'b010;
         awvalid_reg <= 1'b1;
     end
 end
@@ -158,7 +158,7 @@ always @(posedge clk) begin
         wvalid_reg  <=  1'b1;
     end else if(w_handshake && wr_cnt != 3'b011)begin
         wid_reg     <=  4'b1;
-        wdata_reg   <=  dcache_data_reg[wr_cnt*32+31:wr_cnt*32];
+        wdata_reg   <=  dcache_data_reg[wr_cnt*32 +: 32];
         wstrb_reg   <=  dcache_wr_wstrb;
         wlast_reg   <=  (wr_cnt==3'b100);
         wvalid_reg  <=  1'b1;

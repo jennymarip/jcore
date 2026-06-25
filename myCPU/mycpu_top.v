@@ -203,7 +203,7 @@ sram2axi_bridge bridge(
     // rd
     .dcache_rd_req      (d_rd_req          ),
     .dcache_rd_type     (d_rd_type         ),
-    .dcahce_rd_addr     (d_rd_addr         ),
+    .dcache_rd_addr     (d_rd_addr         ),
     .dcache_rd_rdy      (d_rd_rdy          ),
     .dcache_rd_ret_vld  (d_rd_ret_vld      ),
     .dcache_rd_ret_last (d_rd_ret_last     ),
