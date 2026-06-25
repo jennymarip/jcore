@@ -60,10 +60,48 @@ end
 /* b controll */
 wire   b_handshake;
 assign b_handshake = bvalid && bready;
+// 状态信号
+reg axi_wr_pending; // 当前有事务正在进行
+always @(posedge clk)begin
+    if(reset || b_handshake)begin
+        axi_wr_pending <= 1'b0;
+    end else if (~axi_wr_pending && dcache_wr_req) begin
+        axi_wr_pending <= 1'b1;
+    end else begin
+        axi_wr_pending <= axi_wr_pending;
+    end
+end
+assign dcache_wr_ready = ~axi_wr_pending;
+
+reg [2:0] wr_cnt;
+always@(posedge clk)begin
+    if(reset)begin
+        wr_cnt <= 3'b0;
+    end else if(w_handshake)begin
+        wr_cnt <= wr_cnt + 3'b1;
+    end else if(wlast && w_handshake)begin
+        wr_cnt <= 3'b0;
+    end else begin
+        wr_cnt <= wr_cnt;
+    end
+end
+
+// 锁存dcache data
+reg [127:0] dcache_data_reg;
+always @(posedge clk) begin
+    if(reset || b_handshake)begin
+        dcache_data_reg <= 128'b0;
+    end else if(dcache_rd_req && ~axi_wr_pending)begin
+        dcache_data_reg <= dcache_wr_data;
+    end else begin
+        dcache_data_reg <= dcache_data_reg;
+    end
+end
+
 // AW & W
 assign awid    = awid_reg   ;
 assign awaddr  = awaddr_reg ;
-assign awlen   = 8'b0       ;
+assign awlen   = awlen_reg  ;
 assign awsize  = awsize_reg ;
 assign awburst = 2'b1       ;
 assign awlock  = 2'b0       ;
@@ -73,45 +111,69 @@ assign awvalid = awvalid_reg;
 
 reg [ 3:0] awid_reg   ;
 reg [31:0] awaddr_reg ;
+reg [ 7:0] awlen_reg  ;
 reg [ 2:0] awsize_reg ;
 reg        awvalid_reg;
 
 assign wid    = wid_reg   ;
 assign wdata  = wdata_reg ;
 assign wstrb  = wstrb_reg ;
-assign wlast  = 1'b1      ;
+assign wlast  = wlast_reg ;
 assign wvalid = wvalid_reg;
 
 reg [ 3:0] wid_reg   ;
 reg [31:0] wdata_reg ;
 reg [ 3:0] wstrb_reg ;
+reg        wlast_reg ;
 reg        wvalid_reg;
 /* aw */
 always @(posedge clk) begin
     if (reset || aw_handshake_flag) begin
         awid_reg    <=  4'b0;
         awaddr_reg  <= 32'b0;
+        awlen_reg   <=  8'b0;
         awsize_reg  <=  3'b0;
         awvalid_reg <=  1'b0;
-    end else if (dcache_wr_req) begin
+    end else if (dcache_wr_req && ~axi_wr_pending) begin
         awid_reg    <= 1'b1;
         awaddr_reg  <= dcache_wr_addr;
+        awlen_reg   <= 8'b11;
         awsize_reg  <= 3'b010
         awvalid_reg <= 1'b1;
     end
 end
 /* w */
 always @(posedge clk) begin
-    if (reset || w_handshake_flag) begin
+    if (reset) begin
         wid_reg     <=  4'b0;
         wdata_reg   <= 32'b0;
         wstrb_reg   <=  4'b0;
+        wlast_reg   <=  1'b0;
         wvalid_reg  <=  1'b0;
-    end else if (dcache_wr_req) begin
-        wid_reg     <= 1'b1;
-        wdata_reg   <= data_sram_wdata;
-        wstrb_reg   <= dcache_wr_wstrb;
-        wvalid_reg  <= 1'b1;
+    end else if(~axi_wr_pending && dcache_wr_req)begin
+        wid_reg     <=  4'b1;
+        wdata_reg   <=  dcache_data_reg[31:0];
+        wstrb_reg   <=  dcache_wr_wstrb;
+        wlast_reg   <=  1'b0;
+        wvalid_reg  <=  1'b1;
+    end else if(w_handshake && wr_cnt != 3'b011)begin
+        wid_reg     <=  4'b1;
+        wdata_reg   <=  dcache_data_reg[wr_cnt*32+31:wr_cnt*32];
+        wstrb_reg   <=  dcache_wr_wstrb;
+        wlast_reg   <=  (wr_cnt==3'b100);
+        wvalid_reg  <=  1'b1;
+    end else if(w_handshake && wr_cnt == 3'b011)begin
+        wid_reg     <=  4'b0;
+        wdata_reg   <= 32'b0;
+        wstrb_reg   <=  4'b0;
+        wlast_reg   <=  1'b0;
+        wvalid_reg  <=  1'b0;
+    end else begin
+        wid_reg     <= wid_reg   ;
+        wdata_reg   <= wdata_reg ;
+        wstrb_reg   <= wstrb_reg ;
+        wlast_reg   <= wlast_reg ; 
+        wvalid_reg  <= wvalid_reg;
     end
 end
 // B
