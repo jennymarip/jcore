@@ -5,6 +5,7 @@
 * 顶层接口实现为axi32
 * 实现了基于tlb的存储管理单元，存储管理的页大小固定为4KB
 * 集成icache,二路组相联,缓存大小16kB
+* 正在集成dcache，目前有bug。稳定版本：642a128119651bb01f3c4de8c483d3d998205776
 ## 验证方法
 * 用于生成trace文件的工程CPU_CDE_AXI/cpu132_gettrace/run_vivado/cpu132_gettrace/cpu132_gettrace.xpr，打开vivado，仿真运行，生成trace文件（生成的golden_trace.txt文件在CPU_CDE_AXI/cpu132_gettrace目录下）
 * myCPU文件夹下包含项目rtl，mycpu_top.v为cpu顶层文件
