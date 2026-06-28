@@ -84,7 +84,7 @@ always @(posedge clk) begin
         arlen_reg   <= 8'b11;
         arsize_reg  <= 3'b010;
         arvalid_reg <= 1'b1;
-    end else if(dcache_rd_req && ~arvalid && ~dcache_rd_req_send)begin //data
+    end else if(dcache_rd_req && ~arvalid && ~dcache_rd_req_send && ~icache_rd_axi_pending)begin //data
         arid_reg    <= 4'b1;
         araddr_reg  <= dcache_rd_addr;
         arlen_reg   <= 8'b11;
@@ -128,7 +128,7 @@ reg dcache_rd_req_send; // 数据请求已经发出
 always@(posedge clk)begin
     if(reset)begin
         dcache_rd_axi_pending <= 1'b0;
-    end else if(dcache_rd_req)begin
+    end else if(dcache_rd_req && ~icache_rd_axi_pending)begin
         dcache_rd_axi_pending <= 1'b1;
     end else if(dcache_rd_axi_pending && rlast && rvalid && rready)begin
         dcache_rd_axi_pending <= 1'b0;
